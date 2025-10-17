@@ -122,10 +122,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/admin/login', { email, password })
       if (response.data.success) {
-        // Store token in localStorage
         localStorage.setItem('auth_token', response.data.token)
         localStorage.setItem('auth_type', 'admin')
-        // Set default authorization header
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
         setUser(response.data.user)
         setEmployee(null)
@@ -152,10 +150,8 @@ export const AuthProvider = ({ children }) => {
       })
 
       if (response.data.success) {
-        // Store token in localStorage
         localStorage.setItem('auth_token', response.data.token)
         localStorage.setItem('auth_type', 'employee')
-        // Set default authorization header
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
         setEmployee(response.data.employee)
         setUser(null)
