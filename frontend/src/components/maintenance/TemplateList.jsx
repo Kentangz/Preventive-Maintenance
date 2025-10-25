@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { Edit, Trash2, Search, Loader2, FileText } from 'lucide-react'
+import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import api from '../../utils/api'
 
 const TemplateList = ({ onEdit, onRefresh }) => {
@@ -11,7 +11,10 @@ const TemplateList = ({ onEdit, onRefresh }) => {
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
   const [deletingId, setDeletingId] = useState(null)
+  const [duplicatingId, setDuplicatingId] = useState(null)
 
   useEffect(() => {
     fetchTemplates()
@@ -52,11 +55,72 @@ const TemplateList = ({ onEdit, onRefresh }) => {
     }
   }
 
+  const handleDuplicate = async (template) => {
+    try {
+      setDuplicatingId(template.id)
+      
+      const response = await api.post(`/admin/checklist-templates/${template.id}/duplicate`)
+      
+      if (response.data.success) {
+        // Refresh templates list
+        await fetchTemplates()
+        if (onRefresh) onRefresh()
+        setError('')
+      }
+    } catch {
+      setError('Gagal menduplikasi template')
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
+
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = filterCategory === 'all' || template.category === filterCategory
     return matchesSearch && matchesCategory
+  }).sort((a, b) => {
+    let aValue, bValue
+    
+    switch (sortBy) {
+      case 'name':
+        aValue = a.name.toLowerCase()
+        bValue = b.name.toLowerCase()
+        break
+      case 'category':
+        aValue = a.category.toLowerCase()
+        bValue = b.category.toLowerCase()
+        break
+      case 'is_active':
+        aValue = a.is_active ? 1 : 0
+        bValue = b.is_active ? 1 : 0
+        break
+      case 'created_at':
+      default:
+        aValue = new Date(a.created_at)
+        bValue = new Date(b.created_at)
+        break
+    }
+    
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+    }
   })
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('desc')
+    }
+  }
+
+  const getSortIcon = (field) => {
+    if (sortBy !== field) return <ArrowUpDown className="h-4 w-4" />
+    return sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+  }
 
   if (loading) {
     return (
@@ -116,8 +180,55 @@ const TemplateList = ({ onEdit, onRefresh }) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {filteredTemplates.map((template) => (
+        <div className="space-y-4">
+          {/* Sort Header */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Daftar Template ({filteredTemplates.length})</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Urutkan berdasarkan:</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={sortBy === 'name' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('name')}
+                      className="flex items-center gap-1"
+                    >
+                      Nama {getSortIcon('name')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'category' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('category')}
+                      className="flex items-center gap-1"
+                    >
+                      Kategori {getSortIcon('category')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'is_active' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('is_active')}
+                      className="flex items-center gap-1"
+                    >
+                      Status {getSortIcon('is_active')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'created_at' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleSort('created_at')}
+                      className="flex items-center gap-1"
+                    >
+                      Tanggal {getSortIcon('created_at')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="grid gap-4">
+            {filteredTemplates.map((template) => (
             <Card key={template.id}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -154,6 +265,21 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleDuplicate(template)}
+                      disabled={duplicatingId === template.id}
+                    >
+                      {duplicatingId === template.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplikat
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDelete(template.id)}
                       disabled={deletingId === template.id}
                       className="text-destructive hover:text-destructive"
@@ -172,6 +298,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       )}
     </div>

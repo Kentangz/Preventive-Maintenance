@@ -4,53 +4,67 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    @page {
+      size: A4;
+      margin: 15mm;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 0;
       background: white;
     }
 
     .container {
-      max-width: 210mm;
-      margin: 0 auto;
+      width: 100%;
       border: 2px solid black;
       padding: 15px;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
       margin-bottom: 10px;
     }
 
+    .header-table td {
+      vertical-align: middle;
+      border: none;
+    }
+
     .logo-left {
+      width: 15%;
       font-size: 40px;
       font-weight: bold;
       color: #0066cc;
       font-style: italic;
+      text-align: left;
     }
 
     .header-center {
+      width: 70%;
       text-align: center;
-      flex-grow: 1;
+      padding: 0 10px;
     }
 
-    .header-center div:first-child {
+    .header-center-bold {
       font-weight: bold;
       font-size: 13px;
+      margin-bottom: 2px;
     }
 
-    .header-center div:last-child {
+    .header-center-normal {
       font-size: 12px;
     }
 
     .logo-right {
+      width: 15%;
       font-size: 40px;
       font-weight: bold;
       color: #cc0000;
       font-style: italic;
+      text-align: right;
     }
 
     .title {
@@ -62,10 +76,28 @@
       margin: 10px 0;
     }
 
-    .pic-info {
-      margin: 30px 0;
-      padding: 20px;
+    .pic-info-table {
+      width: 100%;
       border: 1px solid black;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    .pic-info-table td {
+      vertical-align: top;
+      border: none;
+    }
+
+    .info-header {
+      background: #d3d3d3;
+      padding: 5px 10px;
+      font-weight: bold;
+      font-size: 12px;
+      border-bottom: 1px solid black;
+    }
+
+    .info-content {
+      padding: 10px;
     }
 
     .info-row {
@@ -130,44 +162,78 @@
       max-width: 100%;
       max-height: 100%;
     }
+
+    .signature-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      font-size: 12px;
+    }
+
+    .signature-table td {
+      text-align: center;
+      width: 50%;
+      vertical-align: top;
+      border: none;
+    }
+
+    .signature-title {
+      margin-bottom: 60px;
+    }
+
+    .signature-name {
+      text-decoration: underline;
+      font-weight: bold;
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="header">
-      <div class="logo-left">SiSi</div>
-      <div class="header-center">
-        <div>PT. Sinergi Informatika Semen Indonesia</div>
-        <div>Digital Service - Ops & Dev Infra</div>
-      </div>
-      <div class="logo-right">SIG</div>
-    </div>
+    <!-- Header with 3 columns -->
+    <table class="header-table">
+      <tr>
+        <td class="logo-left">SiSi</td>
+        <td class="header-center">
+          <div class="header-center-bold">PT. Sinergi Informatika Semen Indonesia</div>
+          <div class="header-center-normal">Digital Service - Ops & Dev Infra</div>
+        </td>
+        <td class="logo-right">SIG</td>
+      </tr>
+    </table>
 
     <div class="title">BUKTI PIC YANG MELAKUKAN MAINTENANCE</div>
 
-    <div class="pic-info">
-      <div class="info-row">
-        <div class="label">Nama:</div>
-        <div class="value">{{ $record->employee->name }}</div>
-      </div>
-      <div class="info-row">
-        <div class="label">Tanggal Akun Dibuat:</div>
-        <div class="value">{{ $record->employee->created_at->format('d F Y') }}</div>
-      </div>
-      <div class="info-row">
-        <div class="label">Tanggal Maintenance:</div>
-        <div class="value">{{ $date }}</div>
-      </div>
-      <div class="info-row">
-        <div class="label">Device:</div>
-        <div class="value">{{ $record->device_data['device'] ?? '' }}</div>
-      </div>
-      <div class="info-row">
-        <div class="label">Location:</div>
-        <div class="value">{{ $record->device_data['location'] ?? '' }}</div>
-      </div>
-    </div>
+    <!-- PIC Info Section -->
+    <table class="pic-info-table">
+      <tr>
+        <td>
+          <div class="info-header">PIC Information</div>
+          <div class="info-content">
+            <div class="info-row">
+              <div class="label">Nama:</div>
+              <div class="value">{{ $record->employee->name }}</div>
+            </div>
+            <div class="info-row">
+              <div class="label">Tanggal Akun Dibuat:</div>
+              <div class="value">{{ $record->employee->created_at->format('d F Y') }}</div>
+            </div>
+            <div class="info-row">
+              <div class="label">Tanggal Maintenance:</div>
+              <div class="value">{{ $date }}</div>
+            </div>
+            <div class="info-row">
+              <div class="label">Device:</div>
+              <div class="value">{{ $record->device_data['device'] ?? '' }}</div>
+            </div>
+            <div class="info-row">
+              <div class="label">Location:</div>
+              <div class="value">{{ $record->device_data['location'] ?? '' }}</div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
 
     <div class="photo-section">
       <div class="photo-label">Foto Identitas</div>
@@ -203,12 +269,21 @@
       </div>
     </div>
 
-    <div style="text-align: center; margin-top: 50px; font-size: 12px;">
-      <div><strong>Officer Preventive Maintenance</strong></div>
-      <div style="margin-top: 60px; text-decoration: underline; font-weight: bold;">
-        {{ $record->employee->name }}
-      </div>
-    </div>
+    <!-- Signature Section -->
+    <table class="signature-table">
+      <tr>
+        <td>
+          <div style="margin-bottom: 5px; font-size: 12px; visibility: hidden">Placeholder</div>
+          <div class="signature-title">Person In Charge, SIG</div>
+          <div class="signature-name">{{ is_array($record->template->device_fields) ? ($record->template->device_fields['admin_name'] ?? 'Admin') : ($record->template->device_fields ?? 'Admin') }}</div>
+        </td>
+        <td>
+          <div class="date-location" style="margin-right:80px; font-size: 12px">{{ $record->device_data['location'] ?? 'Tuban' }}, {{ $date }}</div>
+          <div class="signature-title">Officer Preventive Maintenance</div>
+          <div class="signature-name">{{ $record->employee->name }}</div>
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 

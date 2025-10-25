@@ -26,19 +26,33 @@ const ChecklistForm = ({ category, template }) => {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (template && template.items) {
+    if (template) {
+      // Initialize device data from template
+      if (template.device_fields) {
+        setDeviceData({
+          device: template.device_fields.device || '',
+          id_tagging_asset: template.device_fields.id_tagging_asset || '',
+          opco: template.device_fields.opco || '',
+          merk_type: template.device_fields.merk_type || '',
+          serial_number: template.device_fields.serial_number || '',
+          location: template.device_fields.location || ''
+        })
+      }
+
       // Initialize checklist responses
-      const responses = template.items.map((item, index) => ({
-        sectionIndex: index,
-        sectionTitle: item.title,
-        items: item.items.map((subItem) => ({
-          description: subItem.description,
-          normal: false,
-          error: false,
-          information: ''
+      if (template.items) {
+        const responses = template.items.map((item, index) => ({
+          sectionIndex: index,
+          sectionTitle: item.title,
+          items: item.items.map((subItem) => ({
+            description: subItem.description,
+            normal: false,
+            error: false,
+            information: ''
+          }))
         }))
-      }))
-      setChecklistResponses(responses)
+        setChecklistResponses(responses)
+      }
     }
   }, [template])
 
@@ -109,6 +123,16 @@ const ChecklistForm = ({ category, template }) => {
       return
     }
 
+    // Check if error items have information filled
+    for (const section of checklistResponses) {
+      for (const item of section.items) {
+        if (item.error && !item.information) {
+          setError('Field information wajib diisi untuk item yang error')
+          return
+        }
+      }
+    }
+
     setLoading(true)
     setError('')
     setMessage('')
@@ -143,7 +167,10 @@ const ChecklistForm = ({ category, template }) => {
         setPreview(null)
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Gagal menyimpan maintenance record')
+      console.error('Error:', err.response?.data)
+      const errorMessage = err.response?.data?.message || 
+                          (err.response?.data?.errors ? JSON.stringify(err.response.data.errors) : 'Gagal menyimpan maintenance record')
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -178,62 +205,56 @@ const ChecklistForm = ({ category, template }) => {
           <CardDescription>Informasi perangkat yang akan di-maintenance</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Device</Label>
-              <Input
-                value={deviceData.device}
-                onChange={(e) => handleDeviceChange('device', e.target.value)}
-                placeholder="Device name"
-                required
-              />
-            </div>
-            <div>
-              <Label>ID Tagging Asset</Label>
-              <Input
-                value={deviceData.id_tagging_asset}
-                onChange={(e) => handleDeviceChange('id_tagging_asset', e.target.value)}
-                placeholder="ID Tagging"
-                required
-              />
-            </div>
-            <div>
-              <Label>OpCo</Label>
-              <Input
-                value={deviceData.opco}
-                onChange={(e) => handleDeviceChange('opco', e.target.value)}
-                placeholder="OpCo"
-                required
-              />
-            </div>
-            <div>
-              <Label>Merk/Type</Label>
-              <Input
-                value={deviceData.merk_type}
-                onChange={(e) => handleDeviceChange('merk_type', e.target.value)}
-                placeholder="Merk/Type"
-                required
-              />
-            </div>
-            <div>
-              <Label>Serial Number</Label>
-              <Input
-                value={deviceData.serial_number}
-                onChange={(e) => handleDeviceChange('serial_number', e.target.value)}
-                placeholder="Serial Number"
-                required
-              />
-            </div>
-            <div>
-              <Label>Location</Label>
-              <Input
-                value={deviceData.location}
-                onChange={(e) => handleDeviceChange('location', e.target.value)}
-                placeholder="Location"
-                required
-              />
-            </div>
-          </div>
+                    <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Device</Label>
+                  <Input
+                    value={deviceData.device}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label>ID Tagging Asset</Label>
+                  <Input
+                    value={deviceData.id_tagging_asset}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label>OpCo</Label>
+                  <Input
+                    value={deviceData.opco}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label>Merk/Type</Label>
+                  <Input
+                    value={deviceData.merk_type}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label>Serial Number</Label>
+                  <Input
+                    value={deviceData.serial_number}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label>Location</Label>
+                  <Input
+                    value={deviceData.location}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
         </CardContent>
       </Card>
 
@@ -246,44 +267,58 @@ const ChecklistForm = ({ category, template }) => {
           <CardContent>
             <div className="space-y-4">
               {item.items && item.items.map((subItem, itemIndex) => (
-                <div key={itemIndex} className="flex items-center gap-4 p-3 border rounded">
-                  <div className="flex-1">
-                    <p className="font-medium">{subItem.description}</p>
-                  </div>
+                <div key={itemIndex} className="space-y-2 p-3 border rounded">
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
-                            handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                          } else {
-                            handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                          }
-                        }}
-                      />
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="text-sm">Normal</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            handleChecklistChange(sectionIndex, itemIndex, 'error', true)
-                            handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                          } else {
-                            handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                          }
-                        }}
-                      />
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm">Error</span>
-                    </label>
+                    <div className="flex-1">
+                      <p className="font-medium">{subItem.description}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
+                              handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                              handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                            } else {
+                              handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                            }
+                          }}
+                        />
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-sm">Normal</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleChecklistChange(sectionIndex, itemIndex, 'error', true)
+                              handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                            } else {
+                              handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                              handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                            }
+                          }}
+                        />
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm">Error</span>
+                      </label>
+                    </div>
                   </div>
+                  {checklistResponses[sectionIndex]?.items[itemIndex]?.error && (
+                    <div>
+                      <Input
+                        placeholder="Masukkan informasi error..."
+                        value={checklistResponses[sectionIndex]?.items[itemIndex]?.information || ''}
+                        onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'information', e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -328,12 +363,10 @@ const ChecklistForm = ({ category, template }) => {
                     Buka Kamera
                   </Button>
                   <label>
-                    <Button type="button" variant="outline" asChild>
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload File
-                      </span>
-                    </Button>
+                    <div className="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-sm font-medium cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload File
+                    </div>
                     <input
                       type="file"
                       accept="image/*"

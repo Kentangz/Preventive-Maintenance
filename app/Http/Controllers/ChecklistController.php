@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ChecklistController extends Controller
@@ -231,6 +232,50 @@ class ChecklistController extends Controller
     }
 
     /**
+     * Duplicate checklist template
+     */
+    public function duplicateTemplate(Request $request, int $id): JsonResponse
+    {
+        $template = ChecklistTemplate::with('items')->find($id);
+
+        if (!$template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Template not found'
+            ], 404);
+        }
+
+        // Create new template with duplicated data
+        $newTemplate = ChecklistTemplate::create([
+            'category' => $template->category,
+            'name' => $template->name . ' (Copy)',
+            'device_fields' => $template->device_fields,
+            'configuration_items' => $template->configuration_items,
+            'special_fields' => $template->special_fields,
+            'is_active' => false, // Set to inactive by default
+        ]);
+
+        // Duplicate checklist items
+        foreach ($template->items as $item) {
+            ChecklistItem::create([
+                'checklist_template_id' => $newTemplate->id,
+                'title' => $item->title,
+                'columns' => $item->columns,
+                'items' => $item->items,
+                'order' => $item->order,
+            ]);
+        }
+
+        $newTemplate->load('items');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Template duplicated successfully',
+            'data' => $newTemplate
+        ], 201);
+    }
+
+    /**
      * Get all maintenance records (Admin)
      */
     public function getMaintenanceRecords(Request $request): JsonResponse
@@ -278,10 +323,19 @@ class ChecklistController extends Controller
     {
         $employee = $request->user();
 
+        // Decode JSON strings if needed
+        $deviceData = $request->device_data;
+        if (is_string($deviceData)) {
+            $deviceData = json_decode($deviceData, true);
+        }
+
+        $checklistResponses = $request->checklist_responses;
+        if (is_string($checklistResponses)) {
+            $checklistResponses = json_decode($checklistResponses, true);
+        }
+
         $validator = Validator::make($request->all(), [
             'checklist_template_id' => 'required|exists:checklist_templates,id',
-            'device_data' => 'required|array',
-            'checklist_responses' => 'required|array',
             'notes' => 'required|string',
             'device_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
@@ -304,8 +358,8 @@ class ChecklistController extends Controller
         $record = MaintenanceRecord::create([
             'checklist_template_id' => $request->checklist_template_id,
             'employee_id' => $employee->id,
-            'device_data' => $request->device_data,
-            'checklist_responses' => $request->checklist_responses,
+            'device_data' => $deviceData,
+            'checklist_responses' => $checklistResponses,
             'notes' => $request->notes,
             'photo_path' => $photoPath,
             'status' => 'completed',
@@ -380,6 +434,7 @@ class ChecklistController extends Controller
             // Generate device photo page (Page 2)
             $devicePhotoHtml = view('pdfs.device_photo', [
                 'record' => $record,
+                'date' => $dateFormatted,
                 'storageUrl' => $storageUrl,
             ])->render();
 
@@ -402,6 +457,8 @@ class ChecklistController extends Controller
             // Return PDF response
             return $pdf->download('maintenance_record_' . $record->id . '.pdf');
         } catch (\Exception $e) {
+            Log::error('PDF Generation Error: ' . $e->getMessage());
+            Log::error('Stack Trace: ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate PDF: ' . $e->getMessage()

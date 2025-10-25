@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { Search, Loader2, Download, FileText, User, Calendar } from 'lucide-react'
+import { Search, Loader2, Download, FileText, User, Calendar, Eye } from 'lucide-react'
 import api from '../../utils/api'
 
 const MaintenanceRecordsList = ({ category }) => {
@@ -10,12 +10,9 @@ const MaintenanceRecordsList = ({ category }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(null)
 
-  useEffect(() => {
-    fetchRecords()
-  }, [category])
-
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
       const response = await api.get('/admin/maintenance-records', {
@@ -30,11 +27,96 @@ const MaintenanceRecordsList = ({ category }) => {
     } finally {
       setLoading(false)
     }
+  }, [category])
+
+  useEffect(() => {
+    fetchRecords()
+  }, [fetchRecords])
+
+  const handleDownloadPDF = async (recordId) => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const token = localStorage.getItem('auth_token')
+    
+    console.log('Downloading PDF for record:', recordId)
+    console.log('Token:', token ? 'Token exists' : 'No token')
+    
+    if (!token) {
+      setError('Anda harus login terlebih dahulu')
+      return
+    }
+    
+    try {
+      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf'
+        }
+      })
+      
+      console.log('Response status:', response.status)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `maintenance_record_${recordId}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else {
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        setError('Gagal mengunduh PDF')
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      setError('Gagal mengunduh PDF: ' + error.message)
+    }
   }
 
-  const handleDownloadPDF = (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-    window.open(`${apiBaseUrl}/api/maintenance-records/${recordId}/pdf`, '_blank')
+  const handlePreviewPDF = async (recordId) => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const token = localStorage.getItem('auth_token')
+    
+    if (!token) {
+      setError('Anda harus login terlebih dahulu')
+      return
+    }
+    
+    setPreviewLoading(recordId)
+    
+    try {
+      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf'
+        }
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        // Buka PDF di tab baru untuk preview
+        window.open(url, '_blank')
+        // Cleanup URL setelah beberapa detik
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url)
+        }, 10000)
+      } else {
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        setError('Gagal membuka preview PDF')
+      }
+    } catch (error) {
+      console.error('Error previewing PDF:', error)
+      setError('Gagal membuka preview PDF: ' + error.message)
+    } finally {
+      setPreviewLoading(null)
+    }
   }
 
   const filteredRecords = records.filter(record => {
@@ -120,6 +202,19 @@ const MaintenanceRecordsList = ({ category }) => {
                   </div>
                   
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePreviewPDF(record.id)}
+                      disabled={previewLoading === record.id}
+                    >
+                      {previewLoading === record.id ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4 mr-2" />
+                      )}
+                      Preview
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

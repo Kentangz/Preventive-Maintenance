@@ -14,6 +14,7 @@ const AdminDashboard = () => {
   const [activeItem, setActiveItem] = useState('dashboard')
   const [showBuilder, setShowBuilder] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState('printer')
   const { user } = useAuth()
 
   const renderContent = () => {
@@ -114,10 +115,21 @@ const AdminDashboard = () => {
                 </p>
               </div>
               {!editingTemplate && !showBuilder && (
-                <Button onClick={() => setShowBuilder(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Buat Template Baru
-                </Button>
+                <div className="flex gap-3">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-2 border rounded-md bg-background"
+                  >
+                    <option value="printer">Printer</option>
+                    <option value="switch">Switch</option>
+                    <option value="vvip">VVIP</option>
+                  </select>
+                  <Button onClick={() => setShowBuilder(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Buat Template Baru
+                  </Button>
+                </div>
               )}
             </div>
             
@@ -130,7 +142,7 @@ const AdminDashboard = () => {
                   ← Kembali ke Daftar Template
                 </Button>
                 <ChecklistBuilder 
-                  category="printer" 
+                  category={selectedCategory}
                   template={editingTemplate}
                   onSave={() => {
                     setShowBuilder(false)

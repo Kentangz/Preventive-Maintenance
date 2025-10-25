@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/checklist-templates/{id}', [ChecklistController::class, 'getTemplate']);
         Route::put('/checklist-templates/{id}', [ChecklistController::class, 'updateTemplate']);
         Route::delete('/checklist-templates/{id}', [ChecklistController::class, 'deleteTemplate']);
+        Route::post('/checklist-templates/{id}/duplicate', [ChecklistController::class, 'duplicateTemplate']);
         Route::get('/maintenance-records', [ChecklistController::class, 'getMaintenanceRecords']); // List maintenance records for admin
     });
 

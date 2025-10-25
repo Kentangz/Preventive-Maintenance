@@ -24,7 +24,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       stok_tinta: []
     },
     items: [],
-    is_active: false
+    is_active: true
   })
 
   const [loading, setLoading] = useState(false)
@@ -96,14 +96,47 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const addItemToSection = (sectionIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items.push({
-      description: '',
-      normal: false,
-      error: false,
-      information: ''
+      description: ''
     })
     setFormData(prev => ({
       ...prev,
       items: newItems
+    }))
+  }
+
+  // Special functions for Stok Tinta (only for Printer category)
+  const addStokTintaItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      special_fields: {
+        ...prev.special_fields,
+        stok_tinta: [
+          ...(prev.special_fields?.stok_tinta || []),
+          { description: '' }
+        ]
+      }
+    }))
+  }
+
+  const removeStokTintaItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      special_fields: {
+        ...prev.special_fields,
+        stok_tinta: prev.special_fields?.stok_tinta?.filter((_, i) => i !== index) || []
+      }
+    }))
+  }
+
+  const updateStokTintaItem = (index, value) => {
+    const items = [...(formData.special_fields?.stok_tinta || [])]
+    items[index].description = value
+    setFormData(prev => ({
+      ...prev,
+      special_fields: {
+        ...prev.special_fields,
+        stok_tinta: items
+      }
     }))
   }
 
@@ -190,7 +223,58 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {previewMode ? (
+            <div className="space-y-6 p-4 border rounded-lg bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Preview Template</h3>
+                                 {template && template.id && (
+                   <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded">
+                     Preview PDF hanya tersedia setelah maintenance record dibuat
+                   </div>
+                 )}
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <strong>Category:</strong> {formData.category}
+                </div>
+                <div>
+                  <strong>Name:</strong> {formData.name || '(No name)'}
+                </div>
+                <div>
+                  <strong>Status:</strong> {formData.is_active ? 'Active' : 'Inactive'}
+                </div>
+                <div>
+                  <strong>Device Fields:</strong>
+                  <div className="ml-4 mt-2 space-y-1">
+                    <div>Device: {formData.device_fields.device || '-'}</div>
+                    <div>ID Tagging Asset: {formData.device_fields.id_tagging_asset || '-'}</div>
+                    <div>OpCo: {formData.device_fields.opco || '-'}</div>
+                    <div>Merk/Type: {formData.device_fields.merk_type || '-'}</div>
+                    <div>Serial Number: {formData.device_fields.serial_number || '-'}</div>
+                    <div>Location: {formData.device_fields.location || '-'}</div>
+                  </div>
+                </div>
+                <div>
+                  <strong>Checklist Items ({formData.items.length} sections):</strong>
+                  {formData.items.length === 0 ? (
+                    <div className="ml-4 mt-2 text-gray-500">No items yet</div>
+                  ) : (
+                    <div className="ml-4 mt-2 space-y-2">
+                      {formData.items.map((item, idx) => (
+                        <div key={idx} className="border-l-4 border-blue-500 pl-3">
+                          <div className="font-semibold">{item.title || 'Untitled Section'}</div>
+                          <div className="text-sm text-gray-600">
+                            {item.items.length} items
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Template Info */}
             <div className="space-y-4">
               <div>
@@ -326,33 +410,9 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                           <div key={itemIndex} className="flex gap-2 p-2 border rounded">
                             <Input
                               placeholder="Description"
-                              value={subItem.description}
+                              value={subItem.description || ''}
                               onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
                               className="flex-1"
-                            />
-                            <div className="flex items-center gap-2">
-                              <label className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={subItem.normal}
-                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'normal', e.target.checked)}
-                                />
-                                Normal
-                              </label>
-                              <label className="flex items-center gap-1 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={subItem.error}
-                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'error', e.target.checked)}
-                                />
-                                Error
-                              </label>
-                            </div>
-                            <Input
-                              placeholder="Information (optional)"
-                              value={subItem.information}
-                              onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'information', e.target.value)}
-                              className="w-48"
                             />
                             <Button
                               type="button"
@@ -371,6 +431,37 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
               ))}
             </div>
 
+            {/* Stok Tinta - Only for Printer category */}
+            {formData.category === 'printer' && (
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Stok Tinta</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={addStokTintaItem}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+                {(formData.special_fields?.stok_tinta || []).map((item, idx) => (
+                  <div key={idx} className="flex gap-2 p-2 border rounded">
+                    <Input
+                      placeholder="Description (e.g., Merah, Biru)"
+                      value={item.description || ''}
+                      onChange={(e) => updateStokTintaItem(idx, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeStokTintaItem(idx)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button type="submit" disabled={loading}>
                 {loading ? (
@@ -387,6 +478,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
               </Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>
