@@ -2,12 +2,16 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import ProfileForm from '../components/auth/ProfileForm'
+import ChecklistTemplateSelector from '../components/maintenance/ChecklistTemplateSelector'
+import ChecklistForm from '../components/maintenance/ChecklistForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
 import { User, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../components/ui/Skeleton'
+import { Button } from '../components/ui/Button'
 
 const EmployeeDashboard = () => {
   const [activeItem, setActiveItem] = useState('dashboard')
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
   const { employee } = useAuth()
 
   const renderContent = () => {
@@ -97,13 +101,20 @@ const EmployeeDashboard = () => {
                 Form checklist untuk {activeItem}
               </p>
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Form checklist akan ditampilkan di sini
-                </p>
-              </CardContent>
-            </Card>
+            
+            {!selectedTemplate ? (
+              <ChecklistTemplateSelector 
+                category={activeItem} 
+                onTemplateSelect={setSelectedTemplate}
+              />
+            ) : (
+              <div className="space-y-4">
+                <Button variant="outline" onClick={() => setSelectedTemplate(null)}>
+                  ← Kembali ke Pilih Template
+                </Button>
+                <ChecklistForm category={activeItem} template={selectedTemplate} />
+              </div>
+            )}
           </div>
         )
 

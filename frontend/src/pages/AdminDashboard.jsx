@@ -2,12 +2,18 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import ProfileForm from '../components/auth/ProfileForm'
+import ChecklistBuilder from '../components/maintenance/ChecklistBuilder'
+import TemplateList from '../components/maintenance/TemplateList'
+import MaintenanceRecordsList from '../components/maintenance/MaintenanceRecordsList'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
-import { Shield, Users, Settings, Activity } from 'lucide-react'
+import { Shield, Users, Settings, Activity, Plus } from 'lucide-react'
 import { Skeleton } from '../components/ui/Skeleton'
+import { Button } from '../components/ui/Button'
 
 const AdminDashboard = () => {
   const [activeItem, setActiveItem] = useState('dashboard')
+  const [showBuilder, setShowBuilder] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null)
   const { user } = useAuth()
 
   const renderContent = () => {
@@ -100,19 +106,44 @@ const AdminDashboard = () => {
       case 'manage-checklist':
         return (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Kelola Form Checklist</h1>
-              <p className="text-muted-foreground mt-2">
-                Kelola template checklist untuk maintenance
-              </p>
-            </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Form Checklist Builder akan ditampilkan di sini
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Kelola Form Checklist</h1>
+                <p className="text-muted-foreground mt-2">
+                  Kelola template checklist untuk maintenance
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+              {!editingTemplate && !showBuilder && (
+                <Button onClick={() => setShowBuilder(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Buat Template Baru
+                </Button>
+              )}
+            </div>
+            
+            {showBuilder || editingTemplate ? (
+              <div className="space-y-4">
+                <Button variant="outline" onClick={() => {
+                  setShowBuilder(false)
+                  setEditingTemplate(null)
+                }}>
+                  ← Kembali ke Daftar Template
+                </Button>
+                <ChecklistBuilder 
+                  category="printer" 
+                  template={editingTemplate}
+                  onSave={() => {
+                    setShowBuilder(false)
+                    setEditingTemplate(null)
+                  }}
+                />
+              </div>
+            ) : (
+              <TemplateList 
+                onEdit={(template) => setEditingTemplate(template)}
+                onRefresh={() => {}}
+              />
+            )}
           </div>
         )
 
@@ -127,13 +158,7 @@ const AdminDashboard = () => {
                 Daftar maintenance record untuk kategori {activeItem}
               </p>
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Daftar maintenance record akan ditampilkan di sini
-                </p>
-              </CardContent>
-            </Card>
+            <MaintenanceRecordsList category={activeItem} />
           </div>
         )
 
