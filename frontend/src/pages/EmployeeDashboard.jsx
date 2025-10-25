@@ -86,6 +86,46 @@ const EmployeeDashboard = () => {
           </div>
         )
       
+      case 'printer':
+      case 'switch':
+      case 'vvip':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem}</h1>
+              <p className="text-muted-foreground mt-2">
+                Form checklist untuk {activeItem}
+              </p>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-center text-muted-foreground">
+                  Form checklist akan ditampilkan di sini
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )
+
+      case 'schedule':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Jadwal</h1>
+              <p className="text-muted-foreground mt-2">
+                Menu jadwal
+              </p>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-center text-muted-foreground">
+                  Menu jadwal
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )
+
       case 'profile':
         return (
           <div className="space-y-6">

@@ -5,7 +5,12 @@ import {
   User, 
   LogOut,
   Menu,
-  X
+  X,
+  FileText,
+  Printer,
+  Network,
+  Star,
+  Calendar
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import Button from '../ui/Button'
@@ -15,11 +20,36 @@ const Sidebar = ({ activeItem, onItemClick }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, employee, adminLogout, employeeLogout, isAdmin, isEmployee } = useAuth()
 
-  const menuItems = [
+  const adminMenuItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
+    },
+    {
+      id: 'manage-checklist',
+      label: 'Kelola Form Checklist',
+      icon: FileText,
+    },
+    {
+      id: 'printer',
+      label: 'Printer',
+      icon: Printer,
+    },
+    {
+      id: 'switch',
+      label: 'Switch',
+      icon: Network,
+    },
+    {
+      id: 'vvip',
+      label: 'VVIP',
+      icon: Star,
+    },
+    {
+      id: 'schedule',
+      label: 'Jadwal',
+      icon: Calendar,
     },
     {
       id: 'profile',
@@ -27,6 +57,41 @@ const Sidebar = ({ activeItem, onItemClick }) => {
       icon: User,
     },
   ]
+
+  const employeeMenuItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'printer',
+      label: 'Printer',
+      icon: Printer,
+    },
+    {
+      id: 'switch',
+      label: 'Switch',
+      icon: Network,
+    },
+    {
+      id: 'vvip',
+      label: 'VVIP',
+      icon: Star,
+    },
+    {
+      id: 'schedule',
+      label: 'Jadwal',
+      icon: Calendar,
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+    },
+  ]
+
+  const menuItems = isAdmin ? adminMenuItems : employeeMenuItems
 
   const handleLogout = async () => {
     if (isAdmin) {
