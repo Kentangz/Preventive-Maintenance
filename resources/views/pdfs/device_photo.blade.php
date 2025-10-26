@@ -76,31 +76,6 @@
       margin: 10px 0;
     }
 
-    .photo-section {
-      text-align: center;
-      margin: 40px 0;
-    }
-
-    .photo-container {
-      border: 2px solid black;
-      padding: 10px;
-      display: inline-block;
-      max-width: 100%;
-    }
-
-    .photo-container img {
-      max-width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    .photo-label {
-      text-align: center;
-      font-weight: bold;
-      font-size: 14px;
-      margin-top: 15px;
-    }
-
     .device-info-table {
       width: 100%;
       border: 1px solid black;
@@ -214,33 +189,52 @@
     </table>
 
     <div class="photo-section">
-      <div class="photo-container">
-        @php
-        $devicePhoto = $record->photos->where('photo_type', 'device')->first();
-        $photoPath = $devicePhoto ? $storageUrl . '/' . $devicePhoto->photo_path : '';
-        @endphp
+      @php
+      $devicePhotos = $record->photos->where('photo_type', 'device')->take(2);
+      @endphp
 
-        @if($photoPath)
-        <img src="{{ $photoPath }}" alt="Device Photo">
-        @else
-        <div style="padding: 50px; text-align: center; color: #999;">
-          Foto tidak tersedia
+      @foreach($devicePhotos as $index => $devicePhoto)
+      <div class="photo-item">
+        <div class="photo-container" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">
+          @php
+          $photoPath = '';
+          if ($devicePhoto && $devicePhoto->photo_path) {
+          $photoPath = storage_path('app/public/' . $devicePhoto->photo_path);
+          }
+          @endphp
+
+          @if($photoPath && file_exists($photoPath))
+          <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Device Photo" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">>
+          @else
+          <div style="padding: 50px; text-align: center; color: #999;">
+            Foto tidak tersedia
+          </div>
+          @endif
         </div>
-        @endif
       </div>
-      <div class="photo-label">Foto Perangkat Setelah Maintenance</div>
+      @endforeach
+
+      @if($devicePhotos->count() === 0)
+      <div class="photo-item">
+        <div class="photo-container">
+          <div style="padding: 50px; text-align: center; color: #999;">
+            Foto tidak tersedia
+          </div>
+        </div>
+      </div>
+      @endif
     </div>
 
     <!-- Signature Section -->
     <table class="signature-table">
       <tr>
-        <td>
-          <div style="margin-bottom: 5px; font-size: 12px; visibility: hidden">Placeholder</div>
+        <td style="padding-right: 20px;">
+          <div style="margin-bottom: 0px; font-size: 12px; visibility: hidden;">Placeholder</div>
           <div class="signature-title">Person In Charge, SIG</div>
           <div class="signature-name">{{ is_array($record->template->device_fields) ? ($record->template->device_fields['admin_name'] ?? 'Admin') : ($record->template->device_fields ?? 'Admin') }}</div>
         </td>
-        <td>
-          <div class="date-location" style="margin-right:80px; font-size: 12px">{{ $record->device_data['location'] ?? 'Tuban' }}, {{ $date }}</div>
+        <td style="padding-left: 20px;">
+          <div style="text-align: right; margin-bottom: 0px;margin-right: 60px; font-size: 12px;">{{ $record->device_data['location'] ?? 'Tuban' }}, {{ $date }}</div>
           <div class="signature-title">Officer Preventive Maintenance</div>
           <div class="signature-name">{{ $record->employee->name }}</div>
         </td>

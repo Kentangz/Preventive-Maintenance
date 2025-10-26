@@ -417,8 +417,8 @@
           <td class="desc-col check-item" style="border-left: 1px solid black">
             {{ $item['description'] }}
           </td>
-          <td class="check-col">{{ $item['normal'] ? '✓' : '' }}</td>
-          <td class="check-col">{{ $item['error'] ? '✓' : '' }}</td>
+          <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['normal'] ? 'V' : '' }}</td>
+          <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['error'] ? 'V' : '' }}</td>
           <td>{{ $item['information'] ?? '' }}</td>
         </tr>
         @endif

@@ -240,11 +240,14 @@
       <div class="photo-container">
         @php
         $identityPhoto = $record->employee->identity_photo;
-        $photoPath = $identityPhoto ? $storageUrl . '/' . $identityPhoto : '';
+        $photoPath = '';
+        if ($identityPhoto) {
+        $photoPath = storage_path('app/public/' . $identityPhoto);
+        }
         @endphp
 
-        @if($photoPath)
-        <img src="{{ $photoPath }}" alt="Identity Photo">
+        @if($photoPath && file_exists($photoPath))
+        <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Identity Photo">
         @else
         <div style="padding: 40px; text-align: center; color: #999;">
           Tidak ada foto
@@ -258,11 +261,14 @@
       <div class="signature-box">
         @php
         $signature = $record->employee->signature;
-        $signaturePath = $signature ? $storageUrl . '/' . $signature : '';
+        $signaturePath = '';
+        if ($signature) {
+        $signaturePath = storage_path('app/public/' . $signature);
+        }
         @endphp
 
-        @if($signaturePath)
-        <img src="{{ $signaturePath }}" alt="Signature">
+        @if($signaturePath && file_exists($signaturePath))
+        <img src="data:image/png;base64,{{ base64_encode(file_get_contents($signaturePath)) }}" alt="Signature">
         @else
         <span style="color: #999; font-style: italic;">Tidak ada tanda tangan</span>
         @endif
