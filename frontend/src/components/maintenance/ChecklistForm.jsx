@@ -6,7 +6,7 @@ import { Label } from '../ui/Label'
 import { CheckCircle, XCircle, Camera, Loader2, Upload } from 'lucide-react'
 import api from '../../utils/api'
 
-const ChecklistForm = ({ category, template }) => {
+const ChecklistForm = ({ template }) => {
   const [deviceData, setDeviceData] = useState({
     device: '',
     id_tagging_asset: '',
@@ -17,10 +17,10 @@ const ChecklistForm = ({ category, template }) => {
   })
   
   const [checklistResponses, setChecklistResponses] = useState([])
+  const [stokTintaResponses, setStokTintaResponses] = useState([])
   const [notes, setNotes] = useState('')
   const [photo, setPhoto] = useState(null)
   const [preview, setPreview] = useState(null)
-  const [cameraMode, setCameraMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -44,24 +44,39 @@ const ChecklistForm = ({ category, template }) => {
         const responses = template.items.map((item, index) => ({
           sectionIndex: index,
           sectionTitle: item.title,
-          items: item.items.map((subItem) => ({
-            description: subItem.description,
-            normal: false,
-            error: false,
-            information: ''
-          }))
+          items: item.items.map((subItem) => {
+            if (subItem.isInkTonerRibbon) {
+              // Special handling for Ink/Toner/Ribbon type
+              console.log('Ink/Toner/Ribbon item from template:', subItem)
+              return {
+                isInkTonerRibbon: true,
+                description: subItem.description || 'Ink/Toner/Ribbon Type', // Fallback if empty
+                colors: subItem.colors.map(color => ({
+                  name: color.name,
+                  percentage: ''
+                }))
+              }
+            } else {
+              // Regular item
+              return {
+                description: subItem.description,
+                normal: false,
+                error: false,
+                information: ''
+              }
+            }
+          })
         }))
         setChecklistResponses(responses)
       }
+
+      // Initialize stok tinta responses
+      if (template.category === 'printer' && template.special_fields?.stok_tinta) {
+        const stokTintaResponses = template.special_fields.stok_tinta.map(() => '')
+        setStokTintaResponses(stokTintaResponses)
+      }
     }
   }, [template])
-
-  const handleDeviceChange = (field, value) => {
-    setDeviceData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
 
   const handleChecklistChange = (sectionIndex, itemIndex, field, value) => {
     setChecklistResponses(prev => {
@@ -71,39 +86,37 @@ const ChecklistForm = ({ category, template }) => {
     })
   }
 
+  const handleInkTonerRibbonChange = (sectionIndex, itemIndex, colorIndex, field, value) => {
+    setChecklistResponses(prev => {
+      const newResponses = [...prev]
+      newResponses[sectionIndex].items[itemIndex].colors[colorIndex][field] = value
+      return newResponses
+    })
+  }
+
+  const handleStokTintaChange = (index, value) => {
+    setStokTintaResponses(prev => {
+      const newResponses = [...prev]
+      newResponses[index] = value
+      return newResponses
+    })
+  }
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      setCameraMode(true)
+      await navigator.mediaDevices.getUserMedia({ video: true })
       setError('')
-    } catch (err) {
+    } catch {
       setError('Tidak dapat mengakses kamera')
     }
   }
 
-  const stopCamera = () => {
-    setCameraMode(false)
+  const _stopCamera = () => {
+    // Camera functionality removed for now
   }
 
-  const capturePhoto = (videoRef, canvasRef) => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current
-      const video = videoRef.current
-      const context = canvas.getContext('2d')
-      
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], 'captured-photo.jpg', { type: 'image/jpeg' })
-          setPhoto(file)
-          setPreview(URL.createObjectURL(blob))
-          stopCamera()
-        }
-      }, 'image/jpeg', 0.8)
-    }
+  const _capturePhoto = () => {
+    // Camera functionality removed for now
   }
 
   const handlePhotoChange = (e) => {
@@ -133,15 +146,27 @@ const ChecklistForm = ({ category, template }) => {
       }
     }
 
+    // Check if stok tinta is filled
+    if (template.category === 'printer' && template.special_fields?.stok_tinta && template.special_fields.stok_tinta.length > 0) {
+      for (let i = 0; i < template.special_fields.stok_tinta.length; i++) {
+        if (!stokTintaResponses[i] || stokTintaResponses[i] === '') {
+          setError('Jumlah pcs stok tinta wajib diisi')
+          return
+        }
+      }
+    }
+
     setLoading(true)
     setError('')
     setMessage('')
 
     try {
+      // Stok tinta is handled separately in PDF template, no need to add to checklist_responses
       const formData = new FormData()
       formData.append('checklist_template_id', template.id)
       formData.append('device_data', JSON.stringify(deviceData))
       formData.append('checklist_responses', JSON.stringify(checklistResponses))
+      formData.append('stok_tinta_responses', JSON.stringify(stokTintaResponses))
       formData.append('notes', notes)
       formData.append('device_photo', photo)
 
@@ -162,6 +187,8 @@ const ChecklistForm = ({ category, template }) => {
           serial_number: '',
           location: ''
         })
+        setChecklistResponses([])
+        setStokTintaResponses([])
         setNotes('')
         setPhoto(null)
         setPreview(null)
@@ -268,48 +295,78 @@ const ChecklistForm = ({ category, template }) => {
             <div className="space-y-4">
               {item.items && item.items.map((subItem, itemIndex) => (
                 <div key={itemIndex} className="space-y-2 p-3 border rounded">
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <p className="font-medium">{subItem.description}</p>
+                  {subItem.isInkTonerRibbon ? (
+                    // Special UI for Ink/Toner/Ribbon type
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                          Ink/Toner/Ribbon Type
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {(checklistResponses[sectionIndex]?.items[itemIndex]?.colors || []).map((color, colorIndex) => (
+                          <div key={colorIndex} className="flex items-center gap-4 p-2 bg-blue-50 rounded border border-blue-200">
+                            <div className="flex-1">
+                              <p className="font-medium">{color.name}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                placeholder="Masukkan persentase (e.g., 85%)"
+                                value={color.percentage || ''}
+                                onChange={(e) => handleInkTonerRibbonChange(sectionIndex, itemIndex, colorIndex, 'percentage', e.target.value)}
+                                className="w-32"
+                                required
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  ) : (
+                    // Regular item UI
                     <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
-                              handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                              handleChecklistChange(sectionIndex, itemIndex, 'information', '')
-                            } else {
-                              handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                            }
-                          }}
-                        />
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <span className="text-sm">Normal</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              handleChecklistChange(sectionIndex, itemIndex, 'error', true)
-                              handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                            } else {
-                              handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                              handleChecklistChange(sectionIndex, itemIndex, 'information', '')
-                            }
-                          }}
-                        />
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <span className="text-sm">Error</span>
-                      </label>
+                      <div className="flex-1">
+                        <p className="font-medium">{subItem.description}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
+                                handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                                handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                              } else {
+                                handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                              }
+                            }}
+                          />
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm">Normal</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleChecklistChange(sectionIndex, itemIndex, 'error', true)
+                                handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                              } else {
+                                handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                                handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                              }
+                            }}
+                          />
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm">Error</span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                  {checklistResponses[sectionIndex]?.items[itemIndex]?.error && (
+                  )}
+                  {checklistResponses[sectionIndex]?.items[itemIndex]?.error && !subItem.isInkTonerRibbon && (
                     <div>
                       <Input
                         placeholder="Masukkan informasi error..."
@@ -325,6 +382,39 @@ const ChecklistForm = ({ category, template }) => {
           </CardContent>
         </Card>
       ))}
+
+      {/* Stok Tinta - Only for Printer category */}
+      {template.category === 'printer' && template.special_fields?.stok_tinta && template.special_fields.stok_tinta.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Stok Tinta</CardTitle>
+            <CardDescription>Isi jumlah pcs stok tinta yang tersedia</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {template.special_fields.stok_tinta.map((item, index) => (
+                <div key={index} className="flex items-center gap-4 p-3 border rounded">
+                  <div className="flex-1">
+                    <p className="font-medium">{item.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Jumlah pcs"
+                      value={stokTintaResponses[index] || ''}
+                      onChange={(e) => handleStokTintaChange(index, e.target.value)}
+                      className="w-24"
+                      required
+                    />
+                    <span className="text-sm text-muted-foreground">pcs</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Notes */}
       <Card>

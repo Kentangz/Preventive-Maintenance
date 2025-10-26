@@ -334,6 +334,12 @@ class ChecklistController extends Controller
             $checklistResponses = json_decode($checklistResponses, true);
         }
 
+        $stokTintaResponses = $request->stok_tinta_responses;
+        if (is_string($stokTintaResponses)) {
+            $stokTintaResponses = json_decode($stokTintaResponses, true);
+        }
+
+
         $validator = Validator::make($request->all(), [
             'checklist_template_id' => 'required|exists:checklist_templates,id',
             'notes' => 'required|string',
@@ -360,6 +366,7 @@ class ChecklistController extends Controller
             'employee_id' => $employee->id,
             'device_data' => $deviceData,
             'checklist_responses' => $checklistResponses,
+            'stok_tinta_responses' => $stokTintaResponses,
             'notes' => $request->notes,
             'photo_path' => $photoPath,
             'status' => 'completed',

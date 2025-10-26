@@ -394,6 +394,24 @@
           <td colspan="4" class="desc-col" style="font-weight: bold">{{ $section['sectionTitle'] }}</td>
         </tr>
         @foreach($section['items'] as $item)
+        @if(isset($item['isInkTonerRibbon']) && $item['isInkTonerRibbon'])
+        {{-- Special rendering for Ink/Toner/Ribbon type --}}
+        @foreach($item['colors'] as $index => $color)
+        <tr>
+          <td class="no-col"></td>
+          <td class="desc-col check-item" style="border-left: 1px solid black">
+            @if($index === 0)
+            {{ $item['description'] ?? 'Ink/Toner/Ribbon Type' }}
+            @endif
+          </td>
+          <td colspan="2" style="text-align: left; vertical-align: middle; padding-left: 10px;">
+            {{ $color['name'] ?? '' }}
+          </td>
+          <td style="text-align: center">{{ $color['percentage'] ?? '...%' }}</td>
+        </tr>
+        @endforeach
+        @else
+        {{-- Regular item rendering --}}
         <tr>
           <td class="no-col"></td>
           <td class="desc-col check-item" style="border-left: 1px solid black">
@@ -403,6 +421,7 @@
           <td class="check-col">{{ $item['error'] ? '✓' : '' }}</td>
           <td>{{ $item['information'] ?? '' }}</td>
         </tr>
+        @endif
         @endforeach
         <tr class="spacer-row" style="height: 20px">
           <td colspan="5"></td>
@@ -411,41 +430,20 @@
 
         {{-- Special fields for Printer category --}}
         @if($record->template->category === 'printer')
-        {{-- Ink/Toner/Ribbon type --}}
-        @if(isset($record->template->special_fields['ink_toner_ribbon']))
-        <tr class="title-row">
-          <td class="no-col" style="font-weight: bold">{{ $sectionNum++ }}.</td>
-          <td colspan="4" class="desc-col" style="font-weight: bold">Ink/Toner/Ribbon type</td>
-        </tr>
-        @foreach($record->template->special_fields['ink_toner_ribbon'] as $color)
-        <tr>
-          <td class="no-col"></td>
-          <td class="desc-col check-item" style="border-left: 1px solid black"></td>
-          <td colspan="2" style="text-align: left; vertical-align: middle; padding-left: 10px;">
-            {{ is_array($color) ? ($color['description'] ?? '') : $color }}
-          </td>
-          <td style="text-align: center">%</td>
-        </tr>
-        @endforeach
-        <tr class="spacer-row" style="height: 20px">
-          <td colspan="5"></td>
-        </tr>
-        @endif
-
         {{-- Stok tinta --}}
-        @if(isset($record->template->special_fields['stok_tinta']))
+        @if(isset($record->template->special_fields['stok_tinta']) && count($record->template->special_fields['stok_tinta']) > 0)
         <tr class="title-row">
           <td class="no-col" style="font-weight: bold">{{ $sectionNum++ }}.</td>
           <td colspan="4" class="desc-col" style="font-weight: bold">Stok tinta</td>
         </tr>
-        @foreach($record->template->special_fields['stok_tinta'] as $stok)
+        @foreach($record->template->special_fields['stok_tinta'] as $index => $stok)
         <tr>
           <td class="no-col"></td>
           <td class="desc-col check-item" style="border-left: 1px solid black">
             {{ is_array($stok) ? ($stok['description'] ?? '') : $stok }}
           </td>
           <td colspan="3" style="text-align: center; vertical-align: middle">
-            1pcs
+            {{ $record->stok_tinta_responses[$index] ?? '' }}pcs
           </td>
         </tr>
         @endforeach

@@ -13,6 +13,7 @@ class MaintenanceRecord extends Model
         'employee_id',
         'device_data',
         'checklist_responses',
+        'stok_tinta_responses',
         'notes',
         'photo_path',
         'status',
@@ -21,6 +22,7 @@ class MaintenanceRecord extends Model
     protected $casts = [
         'device_data' => 'array',
         'checklist_responses' => 'array',
+        'stok_tinta_responses' => 'array',
     ];
 
     public function template(): BelongsTo

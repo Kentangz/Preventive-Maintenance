@@ -20,7 +20,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     },
     configuration_items: ['PC'],
     special_fields: {
-      ink_toner_ribbon: [],
       stok_tinta: []
     },
     items: [],
@@ -39,7 +38,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
         name: template.name,
         device_fields: template.device_fields,
         configuration_items: template.configuration_items,
-        special_fields: template.special_fields || { ink_toner_ribbon: [], stok_tinta: [] },
+        special_fields: template.special_fields || { stok_tinta: [] },
         items: template.items || [],
         is_active: template.is_active
       })
@@ -104,6 +103,62 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     }))
   }
 
+  // Special functions for Ink/Toner/Ribbon type
+  const addInkTonerRibbonItem = (sectionIndex) => {
+    const newItems = [...formData.items]
+    newItems[sectionIndex].items.push({
+      description: 'Ink/Toner/Ribbon Type', // Set default description
+      isInkTonerRibbon: true,
+      colors: [] // Array untuk menyimpan warna-warna
+    })
+    
+    console.log('Added Ink/Toner/Ribbon item:', newItems[sectionIndex].items[newItems[sectionIndex].items.length - 1])
+    
+    setFormData(prev => ({
+      ...prev,
+      items: newItems
+    }))
+  }
+
+  const addColorToInkTonerRibbon = (sectionIndex, itemIndex) => {
+    const newItems = [...formData.items]
+    if (!newItems[sectionIndex].items[itemIndex].colors) {
+      newItems[sectionIndex].items[itemIndex].colors = []
+    }
+    newItems[sectionIndex].items[itemIndex].colors.push({
+      name: ''
+    })
+    setFormData(prev => ({
+      ...prev,
+      items: newItems
+    }))
+  }
+
+  const updateColorInInkTonerRibbon = (sectionIndex, itemIndex, colorIndex, field, value) => {
+    const newItems = [...formData.items]
+    newItems[sectionIndex].items[itemIndex].colors[colorIndex][field] = value
+    setFormData(prev => ({
+      ...prev,
+      items: newItems
+    }))
+  }
+
+  const removeColorFromInkTonerRibbon = (sectionIndex, itemIndex, colorIndex) => {
+    const newItems = [...formData.items]
+    newItems[sectionIndex].items[itemIndex].colors.splice(colorIndex, 1)
+    setFormData(prev => ({
+      ...prev,
+      items: newItems
+    }))
+  }
+
+  // Check if any section already has Ink/Toner/Ribbon type
+  const hasInkTonerRibbonInAnySection = () => {
+    return formData.items.some(section => 
+      section.items.some(item => item.isInkTonerRibbon)
+    )
+  }
+
   // Special functions for Stok Tinta (only for Printer category)
   const addStokTintaItem = () => {
     setFormData(prev => ({
@@ -152,6 +207,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const updateItemInSection = (sectionIndex, itemIndex, field, value) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items[itemIndex][field] = value
+    
     setFormData(prev => ({
       ...prev,
       items: newItems
@@ -396,32 +452,110 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                       </div>
 
                       <div className="space-y-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addItemToSection(sectionIndex)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Item
-                        </Button>
-
-                        {item.items.map((subItem, itemIndex) => (
-                          <div key={itemIndex} className="flex gap-2 p-2 border rounded">
-                            <Input
-                              placeholder="Description"
-                              value={subItem.description || ''}
-                              onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
-                              className="flex-1"
-                            />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addItemToSection(sectionIndex)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Item
+                          </Button>
+                          {formData.category === 'printer' && !hasInkTonerRibbonInAnySection() && (
                             <Button
                               type="button"
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
-                              onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                              onClick={() => addInkTonerRibbonItem(sectionIndex)}
+                              className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Ink/Toner/Ribbon Type
                             </Button>
+                          )}
+                        </div>
+
+                        {item.items.map((subItem, itemIndex) => (
+                          <div key={itemIndex} className="p-3 border rounded">
+                            {subItem.isInkTonerRibbon ? (
+                              // Special UI for Ink/Toner/Ribbon type
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                      Ink/Toner/Ribbon Type
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Input
+                                    placeholder="Item description (e.g., Ink/Toner/Ribbon Type)"
+                                    value={subItem.description || ''}
+                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
+                                    className="w-full"
+                                  />
+                                  
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => addColorToInkTonerRibbon(sectionIndex, itemIndex)}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Color
+                                    </Button>
+                                  </div>
+                                  
+                                  {(subItem.colors || []).map((color, colorIndex) => (
+                                    <div key={colorIndex} className="flex gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                      <Input
+                                        placeholder="Color name (e.g., Black, Cyan)"
+                                        value={color.name || ''}
+                                        onChange={(e) => updateColorInInkTonerRibbon(sectionIndex, itemIndex, colorIndex, 'name', e.target.value)}
+                                        className="flex-1"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => removeColorFromInkTonerRibbon(sectionIndex, itemIndex, colorIndex)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              // Regular item UI
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Description"
+                                  value={subItem.description || ''}
+                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
