@@ -94,7 +94,7 @@ Running in `http://localhost:5173`
 ### Admin Account
 
 -   **Email**: `admin@maintenance.com`
--   **Password**: `admin123`
+-   **Password**: `rahasia`
 
 ## License
 
