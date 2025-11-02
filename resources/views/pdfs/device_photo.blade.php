@@ -35,11 +35,12 @@
 
     .logo-left {
       width: 15%;
-      font-size: 40px;
-      font-weight: bold;
-      color: #0066cc;
-      font-style: italic;
       text-align: left;
+    }
+
+    .logo-left img {
+      max-width: 80px;
+      height: auto;
     }
 
     .header-center {
@@ -60,11 +61,12 @@
 
     .logo-right {
       width: 15%;
-      font-size: 40px;
-      font-weight: bold;
-      color: #cc0000;
-      font-style: italic;
       text-align: right;
+    }
+
+    .logo-right img {
+      max-width: 80px;
+      height: auto;
     }
 
     .title {
@@ -146,12 +148,30 @@
     <!-- Header with 3 columns -->
     <table class="header-table">
       <tr>
-        <td class="logo-left">SiSi</td>
+        <td class="logo-left">
+          @php
+          $logoSisiPath = public_path('images/logo-SISI.png');
+          @endphp
+          @if(file_exists($logoSisiPath))
+          <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoSisiPath)) }}" alt="SISI Logo">
+          @else
+          <div style="font-size: 40px; font-weight: bold; color: #0066cc; font-style: italic;">SiSi</div>
+          @endif
+        </td>
         <td class="header-center">
           <div class="header-center-bold">PT. Sinergi Informatika Semen Indonesia</div>
           <div class="header-center-normal">Digital Service - Ops & Dev Infra</div>
         </td>
-        <td class="logo-right">SIG</td>
+        <td class="logo-right">
+          @php
+          $logoSigPath = public_path('images/logo-SIG.png');
+          @endphp
+          @if(file_exists($logoSigPath))
+          <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoSigPath)) }}" alt="SIG Logo">
+          @else
+          <div style="font-size: 40px; font-weight: bold; color: #cc0000; font-style: italic;">SIG</div>
+          @endif
+        </td>
       </tr>
     </table>
 

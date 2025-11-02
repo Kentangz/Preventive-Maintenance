@@ -35,11 +35,12 @@
 
     .logo-left {
       width: 15%;
-      font-size: 40px;
-      font-weight: bold;
-      color: #0066cc;
-      font-style: italic;
       text-align: left;
+    }
+
+    .logo-left img {
+      max-width: 80px;
+      height: auto;
     }
 
     .header-center {
@@ -60,11 +61,12 @@
 
     .logo-right {
       width: 15%;
-      font-size: 40px;
-      font-weight: bold;
-      color: #cc0000;
-      font-style: italic;
       text-align: right;
+    }
+
+    .logo-right img {
+      max-width: 80px;
+      height: auto;
     }
 
     .title {
@@ -219,22 +221,18 @@
       border: none !important;
     }
 
-    /* Remove borders from no-col in all tbody rows */
     tbody tr .no-col {
       border: none !important;
     }
 
-    /* Remove borders from title rows */
     .title-row td {
       border: none !important;
     }
 
-    /* Remove borders from notes rows */
     .notes-row td {
       border: none !important;
     }
 
-    /* Keep border only in header */
     thead .no-col {
       border: 1px solid black !important;
     }
@@ -295,12 +293,30 @@
     <!-- Header with 3 columns -->
     <table class="header-table">
       <tr>
-        <td class="logo-left">SiSi</td>
+        <td class="logo-left">
+          @php
+          $logoSisiPath = public_path('images/logo-SISI.png');
+          @endphp
+          @if(file_exists($logoSisiPath))
+          <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoSisiPath)) }}" alt="SISI Logo">
+          @else
+          <div style="font-size: 40px; font-weight: bold; color: #0066cc; font-style: italic;">SiSi</div>
+          @endif
+        </td>
         <td class="header-center">
           <div class="header-center-bold">PT. Sinergi Informatika Semen Indonesia</div>
           <div class="header-center-normal">Digital Service - Ops & Dev Infra</div>
         </td>
-        <td class="logo-right">SIG</td>
+        <td class="logo-right">
+          @php
+          $logoSigPath = public_path('images/logo-SIG.png');
+          @endphp
+          @if(file_exists($logoSigPath))
+          <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoSigPath)) }}" alt="SIG Logo">
+          @else
+          <div style="font-size: 40px; font-weight: bold; color: #cc0000; font-style: italic;">SIG</div>
+          @endif
+        </td>
       </tr>
     </table>
 
@@ -377,7 +393,6 @@
     <!-- Checklist Table -->
     <table class="checklist">
       <thead>
-        {{-- Normal columns layout (header always uses normal layout) --}}
         <tr>
           <th class="no-col" rowspan="2">No</th>
           <th rowspan="2">Description</th>
@@ -406,12 +421,10 @@
         </tr>
         @foreach($section['items'] as $itemIndex => $item)
         @php
-        // Get merge_columns from template item at this index
         $templateItemData = $templateItemsArray[$itemIndex] ?? null;
         $mergeColumns = $templateItemData && isset($templateItemData['merge_columns']) ? $templateItemData['merge_columns'] : false;
         @endphp
         @if(isset($item['isInkTonerRibbon']) && $item['isInkTonerRibbon'])
-        {{-- Special rendering for Ink/Toner/Ribbon type --}}
         @foreach($item['colors'] as $index => $color)
         <tr>
           <td class="no-col"></td>
@@ -433,20 +446,16 @@
         </tr>
         @endforeach
         @else
-        {{-- Regular item rendering --}}
         <tr>
           <td class="no-col"></td>
           <td class="desc-col check-item" style="border-left: 1px solid black">
             {{ $item['description'] }}
           </td>
           @if($mergeColumns)
-          {{-- Merged columns: display merged_text if available, otherwise build from normal/error/information --}}
           <td colspan="3" style="padding: 4px 6px; vertical-align: top; border-left: 1px solid black; border-right: 1px solid black;">
             @if(isset($item['merged_text']) && !empty($item['merged_text']))
-            {{-- Use merged_text directly from user input --}}
             {{ $item['merged_text'] }}
             @else
-            {{-- Fallback: build merged content from normal/error/information --}}
             @php
             $mergedContent = [];
             if (!empty($item['normal'])) {
@@ -463,7 +472,6 @@
             @endif
           </td>
           @else
-          {{-- Normal columns: separate cells --}}
           <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['normal'] ? 'V' : '' }}</td>
           <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['error'] ? 'V' : '' }}</td>
           <td>{{ $item['information'] ?? '' }}</td>
@@ -476,9 +484,7 @@
         </tr>
         @endforeach
 
-        {{-- Special fields for Printer category --}}
         @if($record->template->category === 'printer')
-        {{-- Stok tinta --}}
         @if(isset($record->template->special_fields['stok_tinta']) && count($record->template->special_fields['stok_tinta']) > 0)
         <tr class="title-row">
           <td class="no-col" style="font-weight: bold">{{ $sectionNum++ }}.</td>
