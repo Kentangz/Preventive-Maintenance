@@ -454,14 +454,34 @@ class ChecklistController extends Controller
                 'storageUrl' => $storageUrl,
             ])->render();
 
-            // Combine all pages
-            $fullHtml = $checklistHtml . '<div style="page-break-after: always;"></div>' .
-                $devicePhotoHtml . '<div style="page-break-after: always;"></div>' .
-                $picProofHtml;
+            // Combine all pages with proper page break style
+            $fullHtml = '
+        <html>
+        <head>
+            <style>
+                .page-break {
+                    page-break-after: always;
+                    page-break-inside: avoid;
+                    clear: both;
+                }
+            </style>
+        </head>
+        <body>
+            ' . $checklistHtml . '
+            <div class="page-break"></div>
+            ' . $devicePhotoHtml . '
+            <div class="page-break"></div>
+            ' . $picProofHtml . '
+        </body>
+        </html>';
 
-            // Generate PDF
+            // Generate PDF with specific options
             $pdf = Pdf::loadHTML($fullHtml);
             $pdf->setPaper('A4', 'portrait');
+
+            // Set options to prevent extra pages
+            $pdf->setOption('enable-local-file-access', true);
+            $pdf->setOption('no-stop-slow-scripts', true);
 
             // Return PDF response
             return $pdf->download('maintenance_record_' . $record->id . '.pdf');

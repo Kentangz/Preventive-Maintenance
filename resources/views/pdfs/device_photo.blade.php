@@ -204,7 +204,7 @@
           @endphp
 
           @if($photoPath && file_exists($photoPath))
-          <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Device Photo" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">>
+          <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Device Photo" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">
           @else
           <div style="padding: 50px; text-align: center; color: #999;">
             Foto tidak tersedia
