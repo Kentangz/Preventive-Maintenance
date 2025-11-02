@@ -116,7 +116,7 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
                 <span className={`text-xs px-2 py-1 rounded ${
                   template.is_active 
                     ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {template.is_active ? 'Aktif' : 'Nonaktif'}
                 </span>

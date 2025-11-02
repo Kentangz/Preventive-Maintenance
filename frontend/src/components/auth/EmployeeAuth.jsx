@@ -250,7 +250,7 @@ const EmployeeAuth = () => {
               {cameraMode && (
                 <div className="space-y-3">
                   <div className="flex justify-center">
-                    <div className="relative w-48 h-48 rounded-full overflow-hidden bg-gray-100">
+                    <div className="relative w-48 h-48 rounded-full overflow-hidden bg-muted">
                       <video
                         ref={videoRef}
                         autoPlay

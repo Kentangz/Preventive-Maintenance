@@ -78,18 +78,6 @@
       margin: 10px 0;
     }
 
-    .pic-info-table {
-      width: 100%;
-      border: 1px solid black;
-      border-collapse: collapse;
-      margin: 15px 0;
-    }
-
-    .pic-info-table td {
-      vertical-align: top;
-      border: none;
-    }
-
     .info-header {
       background: #d3d3d3;
       padding: 5px 10px;
@@ -100,6 +88,18 @@
 
     .info-content {
       padding: 10px;
+    }
+
+    .pic-info-table {
+      width: 100%;
+      border: 1px solid black;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    .pic-info-table td {
+      vertical-align: top;
+      border: none;
     }
 
     .info-row {
@@ -120,27 +120,26 @@
 
     .photo-section {
       text-align: center;
-      margin: 30px 0;
+      margin: 20px 0;
     }
 
-    .photo-container {
-      border: 2px solid black;
-      padding: 5px;
-      display: inline-block;
-      border-radius: 50%;
-      overflow: hidden;
-      width: 120px;
-      height: 120px;
+    .photo-label {
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 10px;
     }
 
-    .photo-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .photo-section img {
+      max-width: 60%;
+      max-height: 400px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border: 2px solid #ddd;
     }
 
     .signature-section {
-      margin: 40px 0;
+      margin: 20px 0;
       text-align: center;
     }
 
@@ -150,19 +149,13 @@
       margin-bottom: 10px;
     }
 
-    .signature-box {
-      border: 1px solid black;
-      width: 250px;
-      height: 80px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .signature-box img {
-      max-width: 100%;
-      max-height: 100%;
+    .signature-section img {
+      max-width: 300px;
+      max-height: 100px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border: 1px solid #ddd;
     }
 
     .signature-table {
@@ -242,14 +235,6 @@
               <div class="label">Tanggal Maintenance:</div>
               <div class="value">{{ $date }}</div>
             </div>
-            <div class="info-row">
-              <div class="label">Device:</div>
-              <div class="value">{{ $record->device_data['device'] ?? '' }}</div>
-            </div>
-            <div class="info-row">
-              <div class="label">Location:</div>
-              <div class="value">{{ $record->device_data['location'] ?? '' }}</div>
-            </div>
           </div>
         </td>
       </tr>
@@ -257,42 +242,38 @@
 
     <div class="photo-section">
       <div class="photo-label">Foto Identitas</div>
-      <div class="photo-container">
-        @php
-        $identityPhoto = $record->employee->identity_photo;
-        $photoPath = '';
-        if ($identityPhoto) {
-        $photoPath = storage_path('app/public/' . $identityPhoto);
-        }
-        @endphp
+      @php
+      $identityPhoto = $record->employee->identity_photo;
+      $photoPath = '';
+      if ($identityPhoto) {
+      $photoPath = storage_path('app/public/' . $identityPhoto);
+      }
+      @endphp
 
-        @if($photoPath && file_exists($photoPath))
-        <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Identity Photo">
-        @else
-        <div style="padding: 40px; text-align: center; color: #999;">
-          Tidak ada foto
-        </div>
-        @endif
+      @if($photoPath && file_exists($photoPath))
+      <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Identity Photo">
+      @else
+      <div style="padding: 40px; text-align: center; color: #999;">
+        Tidak ada foto
       </div>
+      @endif
     </div>
 
     <div class="signature-section">
       <div class="signature-label">Tanda Tangan</div>
-      <div class="signature-box">
-        @php
-        $signature = $record->employee->signature;
-        $signaturePath = '';
-        if ($signature) {
-        $signaturePath = storage_path('app/public/' . $signature);
-        }
-        @endphp
+      @php
+      $signature = $record->employee->signature;
+      $signaturePath = '';
+      if ($signature) {
+      $signaturePath = storage_path('app/public/' . $signature);
+      }
+      @endphp
 
-        @if($signaturePath && file_exists($signaturePath))
-        <img src="data:image/png;base64,{{ base64_encode(file_get_contents($signaturePath)) }}" alt="Signature">
-        @else
-        <span style="color: #999; font-style: italic;">Tidak ada tanda tangan</span>
-        @endif
-      </div>
+      @if($signaturePath && file_exists($signaturePath))
+      <img src="data:image/png;base64,{{ base64_encode(file_get_contents($signaturePath)) }}" alt="Signature">
+      @else
+      <span style="color: #999; font-style: italic;">Tidak ada tanda tangan</span>
+      @endif
     </div>
 
     <!-- Signature Section -->
@@ -315,9 +296,9 @@
           <div class="signature-name">{{ isset($admin) && $admin ? $admin->name : (is_array($record->template->device_fields) ? ($record->template->device_fields['admin_name'] ?? 'Admin') : ($record->template->device_fields ?? 'Admin')) }}</div>
         </td>
         <td>
-          <div class="date-location" style="margin-right:80px; font-size: 12px">{{ $record->device_data['opco'] ?? 'Tuban' }}, {{ $date }}</div>
+          <div style="text-align: right; margin-right: 80px; font-size: 12px; margin-bottom: 0;">{{ $record->device_data['opco'] ?? 'Tuban' }}, {{ $date }}</div>
           <div class="signature-title">Officer Preventive Maintenance</div>
-          <div style="text-align: right; margin-bottom: 5px;margin-right:80px; font-size: 12px;">
+          <div style="text-align: right; margin-bottom: 5px; margin-right: 80px; font-size: 12px;">
             @if(isset($showSignatures) && $showSignatures && $record->employee && $record->employee->signature)
             @php
             $employeeSignaturePath = storage_path('app/public/' . $record->employee->signature);

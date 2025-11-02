@@ -350,7 +350,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.device}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -358,7 +358,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.id_tagging_asset}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -366,7 +366,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.opco}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -374,7 +374,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.merk_type}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -382,7 +382,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.serial_number}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -390,7 +390,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   <Input
                     value={deviceData.location}
                     readOnly
-                    className="bg-gray-100"
+                    className="bg-muted"
                   />
                 </div>
               </div>

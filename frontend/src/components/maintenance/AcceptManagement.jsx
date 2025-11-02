@@ -280,7 +280,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'pending'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             }`}
           >
             Pending ({pendingRecords.length})
@@ -290,7 +290,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'rejected'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             }`}
           >
             Rejected ({rejectedRecords.length})

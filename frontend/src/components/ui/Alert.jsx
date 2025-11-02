@@ -24,17 +24,17 @@ const Alert = ({
       iconComponent: XCircle
     },
     warning: {
-      container: 'bg-yellow-50 border-yellow-400 text-yellow-800',
-      icon: 'text-yellow-600',
-      title: 'text-yellow-800',
-      message: 'text-yellow-700',
+      container: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400 dark:border-yellow-500 text-yellow-800 dark:text-yellow-200',
+      icon: 'text-yellow-600 dark:text-yellow-400',
+      title: 'text-yellow-800 dark:text-yellow-200',
+      message: 'text-yellow-700 dark:text-yellow-300',
       iconComponent: AlertTriangle
     },
     info: {
-      container: 'bg-blue-50 border-blue-400 text-blue-800',
-      icon: 'text-blue-600',
-      title: 'text-blue-800',
-      message: 'text-blue-700',
+      container: 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-500 text-blue-800 dark:text-blue-200',
+      icon: 'text-blue-600 dark:text-blue-400',
+      title: 'text-blue-800 dark:text-blue-200',
+      message: 'text-blue-700 dark:text-blue-300',
       iconComponent: Info
     },
     default: {

@@ -78,44 +78,34 @@
       margin: 10px 0;
     }
 
-    .device-info-table {
-      width: 100%;
-      border: 1px solid black;
-      border-collapse: collapse;
-      margin: 15px 0;
+    .photo-section {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
     }
 
-    .device-info-table td {
-      vertical-align: top;
-      border: none;
+    .photo-item {
+      flex: 1;
+      max-width: 48%;
+      min-width: 200px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    .info-header {
-      background: #d3d3d3;
-      padding: 5px 10px;
-      font-weight: bold;
-      font-size: 12px;
-      border-bottom: 1px solid black;
+    .photo-item img {
+      max-width: 100%;
+      max-height: 350px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border: 1px solid #ddd;
     }
 
-    .info-content {
-      padding: 10px;
-    }
-
-    .info-row {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      margin: 8px 0;
-      font-size: 12px;
-    }
-
-    .info-row .label {
-      font-weight: bold;
-    }
-
-    .info-row .value {
-      font-style: italic;
-      color: #666;
+    .photo-item.single {
+      max-width: 60%;
     }
 
     .signature-table {
@@ -178,68 +168,35 @@
     <div class="title">BUKTI FOTO PERANGKAT SETELAH MAINTENANCE</div>
 
     <!-- Device Info Section -->
-    <table class="device-info-table">
-      <tr>
-        <td>
-          <div class="info-header">Device Information</div>
-          <div class="info-content">
-            <div class="info-row">
-              <div class="label">Device:</div>
-              <div class="value">{{ $record->device_data['device'] ?? '' }}</div>
-            </div>
-            <div class="info-row">
-              <div class="label">Merk/Type:</div>
-              <div class="value">{{ $record->device_data['merk_type'] ?? '' }}</div>
-            </div>
-            <div class="info-row">
-              <div class="label">Serial Number:</div>
-              <div class="value">{{ $record->device_data['serial_number'] ?? '' }}</div>
-            </div>
-            <div class="info-row">
-              <div class="label">Location:</div>
-              <div class="value">{{ $record->device_data['location'] ?? '' }}</div>
-            </div>
-            <div class="info-row">
-              <div class="label">Date:</div>
-              <div class="value">{{ $date }}</div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </table>
-
     <div class="photo-section">
       @php
       $devicePhotos = $record->photos->where('photo_type', 'device')->take(2);
+      $photoCount = $devicePhotos->count();
       @endphp
 
       @foreach($devicePhotos as $index => $devicePhoto)
-      <div class="photo-item">
-        <div class="photo-container" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">
-          @php
-          $photoPath = '';
-          if ($devicePhoto && $devicePhoto->photo_path) {
-          $photoPath = storage_path('app/public/' . $devicePhoto->photo_path);
-          }
-          @endphp
+      <div class="photo-item {{ $photoCount === 1 ? 'single' : '' }}">
+        @php
+        $photoPath = '';
+        if ($devicePhoto && $devicePhoto->photo_path) {
+        $photoPath = storage_path('app/public/' . $devicePhoto->photo_path);
+        }
+        @endphp
 
-          @if($photoPath && file_exists($photoPath))
-          <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Device Photo" style="display: flex; align-items: center; justify-content: center; width: 30%; margin-bottom: 15px; border-radius: 0;">
-          @else
-          <div style="padding: 50px; text-align: center; color: #999;">
-            Foto tidak tersedia
-          </div>
-          @endif
+        @if($photoPath && file_exists($photoPath))
+        <img src="data:image/jpeg;base64,{{ base64_encode(file_get_contents($photoPath)) }}" alt="Device Photo {{ $index + 1 }}">
+        @else
+        <div style="padding: 50px; text-align: center; color: #999;">
+          Foto tidak tersedia
         </div>
+        @endif
       </div>
       @endforeach
 
-      @if($devicePhotos->count() === 0)
-      <div class="photo-item">
-        <div class="photo-container">
-          <div style="padding: 50px; text-align: center; color: #999;">
-            Foto tidak tersedia
-          </div>
+      @if($photoCount === 0)
+      <div class="photo-item single">
+        <div style="padding: 50px; text-align: center; color: #999;">
+          Foto tidak tersedia
         </div>
       </div>
       @endif

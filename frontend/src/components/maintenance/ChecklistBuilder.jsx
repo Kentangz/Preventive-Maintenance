@@ -293,7 +293,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
           )}
 
           {previewMode ? (
-            <div className="space-y-6 p-4 border rounded-lg bg-gray-50">
+            <div className="space-y-6 p-4 border rounded-lg bg-muted/50">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Preview Template</h3>
                                  {template && template.id && (
@@ -507,7 +507,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                     className="w-full"
                                   />
                                   
-                                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded border">
                                     <input
                                       type="checkbox"
                                       id={`merge_columns_${sectionIndex}_${itemIndex}`}

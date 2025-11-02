@@ -47,7 +47,7 @@ const CategoryManagement = ({ category }) => {
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'records'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             }`}
           >
             Maintenance Records
@@ -57,7 +57,7 @@ const CategoryManagement = ({ category }) => {
             className={`py-4 px-1 border-b-2 font-medium text-sm relative ${
               activeTab === 'accept'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             }`}
           >
             <span className="relative inline-block">
