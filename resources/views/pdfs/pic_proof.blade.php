@@ -259,23 +259,6 @@
       @endif
     </div>
 
-    <div class="signature-section">
-      <div class="signature-label">Tanda Tangan</div>
-      @php
-      $signature = $record->employee->signature;
-      $signaturePath = '';
-      if ($signature) {
-      $signaturePath = storage_path('app/public/' . $signature);
-      }
-      @endphp
-
-      @if($signaturePath && file_exists($signaturePath))
-      <img src="data:image/png;base64,{{ base64_encode(file_get_contents($signaturePath)) }}" alt="Signature">
-      @else
-      <span style="color: #999; font-style: italic;">Tidak ada tanda tangan</span>
-      @endif
-    </div>
-
     <!-- Signature Section -->
     <table class="signature-table">
       <tr>
