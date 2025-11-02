@@ -26,7 +26,7 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
           handleTemplateSelect(response.data.data[0])
         }
       }
-    } catch (err) {
+    } catch  {
       setError('Gagal memuat templates')
     } finally {
       setLoading(false)

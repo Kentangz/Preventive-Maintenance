@@ -199,6 +199,10 @@
       width: 180px;
     }
 
+    .merged-col {
+      width: 250px;
+    }
+
     .check-item {
       font-style: italic;
       padding: 1px 4px;
@@ -373,6 +377,7 @@
     <!-- Checklist Table -->
     <table class="checklist">
       <thead>
+        {{-- Normal columns layout (header always uses normal layout) --}}
         <tr>
           <th class="no-col" rowspan="2">No</th>
           <th rowspan="2">Description</th>
@@ -387,13 +392,24 @@
       <tbody>
         @php
         $sectionNum = 1;
+        $templateItems = $record->template->items->sortBy('order')->values();
         @endphp
-        @foreach($record->checklist_responses as $section)
+        @foreach($record->checklist_responses as $sectionIndex => $section)
+        @php
+        $sectionItemIndex = $section['sectionIndex'] ?? $sectionIndex;
+        $templateItem = $templateItems[$sectionItemIndex] ?? null;
+        $templateItemsArray = $templateItem ? $templateItem->items : [];
+        @endphp
         <tr class="title-row">
           <td class="no-col" style="font-weight: bold">{{ $sectionNum++ }}.</td>
           <td colspan="4" class="desc-col" style="font-weight: bold">{{ $section['sectionTitle'] }}</td>
         </tr>
-        @foreach($section['items'] as $item)
+        @foreach($section['items'] as $itemIndex => $item)
+        @php
+        // Get merge_columns from template item at this index
+        $templateItemData = $templateItemsArray[$itemIndex] ?? null;
+        $mergeColumns = $templateItemData && isset($templateItemData['merge_columns']) ? $templateItemData['merge_columns'] : false;
+        @endphp
         @if(isset($item['isInkTonerRibbon']) && $item['isInkTonerRibbon'])
         {{-- Special rendering for Ink/Toner/Ribbon type --}}
         @foreach($item['colors'] as $index => $color)
@@ -404,10 +420,16 @@
             {{ $item['description'] ?? 'Ink/Toner/Ribbon Type' }}
             @endif
           </td>
+          @if($mergeColumns)
+          <td style="text-align: left; vertical-align: middle; padding-left: 10px;">
+            {{ $color['name'] ?? '' }} - {{ $color['percentage'] ?? '...%' }}
+          </td>
+          @else
           <td colspan="2" style="text-align: left; vertical-align: middle; padding-left: 10px;">
             {{ $color['name'] ?? '' }}
           </td>
           <td style="text-align: center">{{ $color['percentage'] ?? '...%' }}</td>
+          @endif
         </tr>
         @endforeach
         @else
@@ -417,9 +439,35 @@
           <td class="desc-col check-item" style="border-left: 1px solid black">
             {{ $item['description'] }}
           </td>
+          @if($mergeColumns)
+          {{-- Merged columns: display merged_text if available, otherwise build from normal/error/information --}}
+          <td colspan="3" style="padding: 4px 6px; vertical-align: top; border-left: 1px solid black; border-right: 1px solid black;">
+            @if(isset($item['merged_text']) && !empty($item['merged_text']))
+            {{-- Use merged_text directly from user input --}}
+            {{ $item['merged_text'] }}
+            @else
+            {{-- Fallback: build merged content from normal/error/information --}}
+            @php
+            $mergedContent = [];
+            if (!empty($item['normal'])) {
+            $mergedContent[] = 'Normal: V';
+            }
+            if (!empty($item['error'])) {
+            $mergedContent[] = 'Error: V';
+            }
+            if (!empty($item['information'])) {
+            $mergedContent[] = 'Info: ' . $item['information'];
+            }
+            echo implode(' | ', $mergedContent);
+            @endphp
+            @endif
+          </td>
+          @else
+          {{-- Normal columns: separate cells --}}
           <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['normal'] ? 'V' : '' }}</td>
           <td class="check-col" style="text-align: center; font-weight: bold;">{{ $item['error'] ? 'V' : '' }}</td>
           <td>{{ $item['information'] ?? '' }}</td>
+          @endif
         </tr>
         @endif
         @endforeach

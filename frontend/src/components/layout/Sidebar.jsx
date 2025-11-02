@@ -8,9 +8,11 @@ import {
   X,
   FileText,
   Printer,
+  Computer,
   Network,
+  Router,
   Star,
-  Calendar
+  Files
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import Button from '../ui/Button'
@@ -39,7 +41,7 @@ const Sidebar = ({ activeItem, onItemClick }) => {
     {
       id: 'switch',
       label: 'Switch',
-      icon: Network,
+      icon: Router,
     },
     {
       id: 'vvip',
@@ -47,9 +49,19 @@ const Sidebar = ({ activeItem, onItemClick }) => {
       icon: Star,
     },
     {
+      id: 'pc_desktop',
+      label: 'PC/Desktop',
+      icon: Computer,
+    },
+    {
+      id: 'access_point',
+      label: 'Access Point',
+      icon: Network,
+    },
+    {
       id: 'schedule',
-      label: 'Jadwal',
-      icon: Calendar,
+      label: 'Documents',
+      icon: Files,
     },
     {
       id: 'profile',
@@ -72,7 +84,7 @@ const Sidebar = ({ activeItem, onItemClick }) => {
     {
       id: 'switch',
       label: 'Switch',
-      icon: Network,
+      icon: Router,
     },
     {
       id: 'vvip',
@@ -80,9 +92,14 @@ const Sidebar = ({ activeItem, onItemClick }) => {
       icon: Star,
     },
     {
-      id: 'schedule',
-      label: 'Jadwal',
-      icon: Calendar,
+      id: 'pc_desktop',
+      label: 'PC/Desktop',
+      icon: Computer,
+    },
+    {
+      id: 'access_point',
+      label: 'Access Point',
+      icon: Network,
     },
     {
       id: 'profile',

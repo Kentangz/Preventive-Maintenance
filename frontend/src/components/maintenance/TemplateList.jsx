@@ -158,6 +158,8 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                 <option value="printer">Printer</option>
                 <option value="switch">Switch</option>
                 <option value="vvip">VVIP</option>
+                <option value="pc_desktop">PC/Desktop</option>
+                <option value="access_point">Access Point</option>
               </select>
             </div>
           </div>

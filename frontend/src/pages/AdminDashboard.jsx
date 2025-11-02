@@ -5,6 +5,7 @@ import ProfileForm from '../components/auth/ProfileForm'
 import ChecklistBuilder from '../components/maintenance/ChecklistBuilder'
 import TemplateList from '../components/maintenance/TemplateList'
 import MaintenanceRecordsList from '../components/maintenance/MaintenanceRecordsList'
+import ScheduleManagement from '../components/maintenance/ScheduleManagement'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
 import { Shield, Users, Settings, Activity, Plus } from 'lucide-react'
 import { Skeleton } from '../components/ui/Skeleton'
@@ -124,6 +125,8 @@ const AdminDashboard = () => {
                     <option value="printer">Printer</option>
                     <option value="switch">Switch</option>
                     <option value="vvip">VVIP</option>
+                    <option value="pc_desktop">PC/Desktop</option>
+                    <option value="access_point">Access Point</option>
                   </select>
                   <Button onClick={() => setShowBuilder(true)}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -162,12 +165,14 @@ const AdminDashboard = () => {
       case 'printer':
       case 'switch':
       case 'vvip':
+      case 'pc_desktop':
+      case 'access_point':
         return (
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem}</h1>
+              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem.replace('_', ' ')}</h1>
               <p className="text-muted-foreground mt-2">
-                Daftar maintenance record untuk kategori {activeItem}
+                Daftar maintenance record untuk kategori {activeItem.replace('_', ' ')}
               </p>
             </div>
             <MaintenanceRecordsList category={activeItem} />
@@ -175,23 +180,7 @@ const AdminDashboard = () => {
         )
 
       case 'schedule':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Jadwal</h1>
-              <p className="text-muted-foreground mt-2">
-                Menu jadwal
-              </p>
-            </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Menu jadwal
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )
+        return <ScheduleManagement />
 
       case 'profile':
         return (

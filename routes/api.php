@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\ScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/checklist-templates/{id}', [ChecklistController::class, 'deleteTemplate']);
         Route::post('/checklist-templates/{id}/duplicate', [ChecklistController::class, 'duplicateTemplate']);
         Route::get('/maintenance-records', [ChecklistController::class, 'getMaintenanceRecords']); // List maintenance records for admin
+
+        // Schedule Routes (Admin only)
+        Route::get('/schedules', [ScheduleController::class, 'index']);
+        Route::get('/schedules/{id}', [ScheduleController::class, 'show']);
+        Route::post('/schedules', [ScheduleController::class, 'store']);
+        Route::put('/schedules/{id}', [ScheduleController::class, 'update']);
+        Route::delete('/schedules/{id}', [ScheduleController::class, 'destroy']);
+        Route::get('/schedules/{id}/download', [ScheduleController::class, 'downloadDocument']);
     });
 
     // Employee Routes

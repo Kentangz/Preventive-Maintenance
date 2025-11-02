@@ -93,12 +93,14 @@ const EmployeeDashboard = () => {
       case 'printer':
       case 'switch':
       case 'vvip':
+      case 'pc_desktop':
+      case 'access_point':
         return (
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem}</h1>
+              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem.replace('_', ' ')}</h1>
               <p className="text-muted-foreground mt-2">
-                Form checklist untuk {activeItem}
+                Form checklist untuk {activeItem.replace('_', ' ')}
               </p>
             </div>
             
@@ -115,25 +117,6 @@ const EmployeeDashboard = () => {
                 <ChecklistForm category={activeItem} template={selectedTemplate} />
               </div>
             )}
-          </div>
-        )
-
-      case 'schedule':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Jadwal</h1>
-              <p className="text-muted-foreground mt-2">
-                Menu jadwal
-              </p>
-            </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">
-                  Menu jadwal
-                </p>
-              </CardContent>
-            </Card>
           </div>
         )
 

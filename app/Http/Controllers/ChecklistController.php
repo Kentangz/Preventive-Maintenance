@@ -86,7 +86,7 @@ class ChecklistController extends Controller
     public function createTemplate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'category' => 'required|in:printer,switch,vvip',
+            'category' => 'required|in:printer,switch,vvip,pc_desktop,access_point',
             'name' => 'required|string|max:255',
             'device_fields' => 'required|array',
             'configuration_items' => 'required|array',
@@ -96,6 +96,7 @@ class ChecklistController extends Controller
             'items.*.columns' => 'required|array',
             'items.*.items' => 'required|array',
             'items.*.order' => 'required|integer',
+            'items.*.items.*.merge_columns' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -123,7 +124,7 @@ class ChecklistController extends Controller
                     'checklist_template_id' => $template->id,
                     'title' => $item['title'],
                     'columns' => $item['columns'],
-                    'items' => $item['items'],
+                    'items' => $item['items'], // merge_columns already included in items JSON array
                     'order' => $item['order'],
                 ]);
             }
@@ -153,7 +154,7 @@ class ChecklistController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'category' => 'sometimes|in:printer,switch,vvip',
+            'category' => 'sometimes|in:printer,switch,vvip,pc_desktop,access_point',
             'name' => 'sometimes|string|max:255',
             'device_fields' => 'sometimes|array',
             'configuration_items' => 'sometimes|array',
@@ -163,6 +164,7 @@ class ChecklistController extends Controller
             'items.*.columns' => 'required_with:items|array',
             'items.*.items' => 'required_with:items|array',
             'items.*.order' => 'required_with:items|integer',
+            'items.*.items.*.merge_columns' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -194,7 +196,7 @@ class ChecklistController extends Controller
                     'checklist_template_id' => $template->id,
                     'title' => $item['title'],
                     'columns' => $item['columns'],
-                    'items' => $item['items'],
+                    'items' => $item['items'], // merge_columns already included in items JSON array
                     'order' => $item['order'],
                 ]);
             }
@@ -261,7 +263,7 @@ class ChecklistController extends Controller
                 'checklist_template_id' => $newTemplate->id,
                 'title' => $item->title,
                 'columns' => $item->columns,
-                'items' => $item->items,
+                'items' => $item->items, // merge_columns already included in items JSON array
                 'order' => $item->order,
             ]);
         }
@@ -406,7 +408,7 @@ class ChecklistController extends Controller
      */
     public function generatePDF(Request $request, int $id)
     {
-        $record = MaintenanceRecord::with(['template', 'employee', 'photos'])->find($id);
+        $record = MaintenanceRecord::with(['template.items', 'employee', 'photos'])->find($id);
 
         if (!$record) {
             return response()->json([

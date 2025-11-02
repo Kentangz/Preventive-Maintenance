@@ -39,7 +39,13 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
         device_fields: template.device_fields,
         configuration_items: template.configuration_items,
         special_fields: template.special_fields || { stok_tinta: [] },
-        items: template.items || [],
+        items: template.items ? template.items.map(item => ({
+          ...item,
+          items: item.items ? item.items.map(subItem => ({
+            ...subItem,
+            merge_columns: subItem.merge_columns || false
+          })) : []
+        })) : [],
         is_active: template.is_active
       })
     }
@@ -95,7 +101,8 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const addItemToSection = (sectionIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items.push({
-      description: ''
+      description: '',
+      merge_columns: false
     })
     setFormData(prev => ({
       ...prev,
@@ -109,7 +116,8 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     newItems[sectionIndex].items.push({
       description: 'Ink/Toner/Ribbon Type', // Set default description
       isInkTonerRibbon: true,
-      colors: [] // Array untuk menyimpan warna-warna
+      colors: [], // Array untuk menyimpan warna-warna
+      merge_columns: false
     })
     
     console.log('Added Ink/Toner/Ribbon item:', newItems[sectionIndex].items[newItems[sectionIndex].items.length - 1])
@@ -505,6 +513,19 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                     className="w-full"
                                   />
                                   
+                                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                                    <input
+                                      type="checkbox"
+                                      id={`merge_columns_${sectionIndex}_${itemIndex}`}
+                                      checked={subItem.merge_columns || false}
+                                      onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-sm">
+                                      Merge columns in PDF for this item
+                                    </label>
+                                  </div>
+                                  
                                   <div className="flex gap-2">
                                     <Button
                                       type="button"
@@ -539,21 +560,35 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                               </div>
                             ) : (
                               // Regular item UI
-                              <div className="flex gap-2">
-                                <Input
-                                  placeholder="Description"
-                                  value={subItem.description || ''}
-                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
-                                  className="flex-1"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                              <div className="space-y-2">
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Description"
+                                    value={subItem.description || ''}
+                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                                  <input
+                                    type="checkbox"
+                                    id={`merge_columns_${sectionIndex}_${itemIndex}`}
+                                    checked={subItem.merge_columns || false}
+                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
+                                    className="h-4 w-4"
+                                  />
+                                  <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-sm">
+                                    Merge columns (Normal, Error, Information) in PDF for this item
+                                  </label>
+                                </div>
                               </div>
                             )}
                           </div>

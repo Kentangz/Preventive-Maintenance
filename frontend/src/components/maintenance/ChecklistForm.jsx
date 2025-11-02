@@ -45,9 +45,9 @@ const ChecklistForm = ({ template }) => {
           sectionIndex: index,
           sectionTitle: item.title,
           items: item.items.map((subItem) => {
+            
             if (subItem.isInkTonerRibbon) {
               // Special handling for Ink/Toner/Ribbon type
-              console.log('Ink/Toner/Ribbon item from template:', subItem)
               return {
                 isInkTonerRibbon: true,
                 description: subItem.description || 'Ink/Toner/Ribbon Type', // Fallback if empty
@@ -57,12 +57,24 @@ const ChecklistForm = ({ template }) => {
                 }))
               }
             } else {
-              // Regular item
-              return {
-                description: subItem.description,
-                normal: false,
-                error: false,
-                information: ''
+              // Regular item - check if merge_columns is enabled
+              // Ensure we check merge_columns properly (could be boolean or undefined)
+              const hasMergeColumns = subItem.merge_columns === true || subItem.merge_columns === 'true' || subItem.merge_columns === 1
+              
+              if (hasMergeColumns) {
+                return {
+                  description: subItem.description,
+                  merged_text: '', // Single input for merged columns
+                  merge_columns: true // Store merge_columns flag for rendering check
+                }
+              } else {
+                return {
+                  description: subItem.description,
+                  normal: false,
+                  error: false,
+                  information: '',
+                  merge_columns: false // Store merge_columns flag for rendering check
+                }
               }
             }
           })
@@ -136,12 +148,24 @@ const ChecklistForm = ({ template }) => {
       return
     }
 
-    // Check if error items have information filled
+    // Check if error items have information filled (for non-merged columns)
+    // Check if merged_text items are filled
     for (const section of checklistResponses) {
       for (const item of section.items) {
-        if (item.error && !item.information) {
-          setError('Field information wajib diisi untuk item yang error')
-          return
+        if (!item.isInkTonerRibbon) {
+          if (item.merged_text !== undefined) {
+            // Merged columns item
+            if (!item.merged_text || item.merged_text.trim() === '') {
+              setError('Field Condition & Information wajib diisi untuk item dengan merge columns')
+              return
+            }
+          } else {
+            // Normal columns item
+            if (item.error && !item.information) {
+              setError('Field information wajib diisi untuk item yang error')
+              return
+            }
+          }
         }
       }
     }
@@ -323,58 +347,105 @@ const ChecklistForm = ({ template }) => {
                       </div>
                     </div>
                   ) : (
-                    // Regular item UI
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <p className="font-medium">{subItem.description}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
-                                handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                                handleChecklistChange(sectionIndex, itemIndex, 'information', '')
-                              } else {
-                                handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                              }
-                            }}
+                    // Regular item UI - check if merge_columns is enabled
+                    // Use responseItem as primary source of truth (stored during initialization)
+                    (() => {
+                      // Get response item (stored during initialization)
+                      const responseItem = checklistResponses[sectionIndex]?.items[itemIndex]
+                      
+                      // Check from response first (most reliable)
+                      if (responseItem) {
+                        // If response has merge_columns flag, use it
+                        if (responseItem.merge_columns === true) {
+                          return true
+                        }
+                        // If response has merged_text, it means merge_columns was enabled
+                        if (responseItem.merged_text !== undefined) {
+                          return true
+                        }
+                        // If response has normal/error/information, it means merge_columns was false
+                        if (responseItem.normal !== undefined || responseItem.error !== undefined || responseItem.information !== undefined) {
+                          return false
+                        }
+                      }
+                      
+                      // Fallback: check from template item
+                      const templateHasMergeColumns = subItem.merge_columns === true || subItem.merge_columns === 'true' || subItem.merge_columns === 1
+                      return templateHasMergeColumns
+                    })() ? (
+                      // Merged columns: single text input
+                      <div className="space-y-2">
+                        <div>
+                          <p className="font-medium mb-2">{subItem.description}</p>
+                          <Label>Condition & Information</Label>
+                          <Input
+                            placeholder="Masukkan kondisi dan informasi (contoh: Normal | Error: V | Info: Terjadi kerusakan pada bagian X)"
+                            value={checklistResponses[sectionIndex]?.items[itemIndex]?.merged_text || ''}
+                            onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'merged_text', e.target.value)}
+                            required
+                            className="w-full"
                           />
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm">Normal</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                handleChecklistChange(sectionIndex, itemIndex, 'error', true)
-                                handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
-                              } else {
-                                handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                                handleChecklistChange(sectionIndex, itemIndex, 'information', '')
-                              }
-                            }}
-                          />
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm">Error</span>
-                        </label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Masukkan kondisi dan informasi dalam satu field (misal: Normal: V | Error: V | Info: deskripsi)
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {checklistResponses[sectionIndex]?.items[itemIndex]?.error && !subItem.isInkTonerRibbon && (
-                    <div>
-                      <Input
-                        placeholder="Masukkan informasi error..."
-                        value={checklistResponses[sectionIndex]?.items[itemIndex]?.information || ''}
-                        onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'information', e.target.value)}
-                        required
-                      />
-                    </div>
+                    ) : (
+                      // Normal columns: separate checkboxes and input
+                      <>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <p className="font-medium">{subItem.description}</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checklistResponses[sectionIndex]?.items[itemIndex]?.normal || false}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
+                                    handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                                    handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                                  } else {
+                                    handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                                  }
+                                }}
+                              />
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <span className="text-sm">Normal</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checklistResponses[sectionIndex]?.items[itemIndex]?.error || false}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleChecklistChange(sectionIndex, itemIndex, 'error', true)
+                                    handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
+                                  } else {
+                                    handleChecklistChange(sectionIndex, itemIndex, 'error', false)
+                                    handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                                  }
+                                }}
+                              />
+                              <XCircle className="h-5 w-5 text-red-600" />
+                              <span className="text-sm">Error</span>
+                            </label>
+                          </div>
+                        </div>
+                        {checklistResponses[sectionIndex]?.items[itemIndex]?.error && (
+                          <div>
+                            <Input
+                              placeholder="Masukkan informasi error..."
+                              value={checklistResponses[sectionIndex]?.items[itemIndex]?.information || ''}
+                              onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'information', e.target.value)}
+                              required
+                            />
+                          </div>
+                        )}
+                      </>
+                    )
                   )}
                 </div>
               ))}
