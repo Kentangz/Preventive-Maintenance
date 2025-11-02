@@ -6,7 +6,9 @@ use App\Models\ChecklistTemplate;
 use App\Models\ChecklistItem;
 use App\Models\MaintenanceRecord;
 use App\Models\MaintenancePhoto;
+use App\Models\MaintenanceApproval;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -278,18 +280,18 @@ class ChecklistController extends Controller
     }
 
     /**
-     * Get all maintenance records (Admin)
+     * Get all maintenance records (Admin) - Only accepted records
      */
     public function getMaintenanceRecords(Request $request): JsonResponse
     {
         $category = $request->query('category');
 
-        $query = MaintenanceRecord::with(['template', 'employee', 'photos']);
+        $query = MaintenanceRecord::with(['template', 'employee', 'photos', 'approvals.admin'])
+            ->where('status', 'accepted');
 
+        // Filter by category from record, not template (independent from template)
         if ($category) {
-            $query->whereHas('template', function ($q) use ($category) {
-                $q->where('category', $category);
-            });
+            $query->where('category', $category);
         }
 
         $records = $query->orderBy('created_at', 'desc')->get();
@@ -298,6 +300,245 @@ class ChecklistController extends Controller
             'success' => true,
             'data' => $records
         ]);
+    }
+
+    /**
+     * Get pending maintenance records by category (Admin)
+     */
+    public function getPendingRecords(Request $request, string $category): JsonResponse
+    {
+        $records = MaintenanceRecord::with(['template', 'employee', 'photos'])
+            ->where('category', $category) // Filter by category from record, not template
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $records
+        ]);
+    }
+
+    /**
+     * Get rejected maintenance records by category (Admin)
+     */
+    public function getRejectedRecords(Request $request, string $category): JsonResponse
+    {
+        $records = MaintenanceRecord::with(['template', 'employee', 'photos', 'approvals.admin'])
+            ->where('category', $category) // Filter by category from record, not template
+            ->where('status', 'rejected')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $records
+        ]);
+    }
+
+    /**
+     * Accept maintenance record
+     */
+    public function acceptRecord(Request $request, int $id): JsonResponse
+    {
+        $admin = $request->user();
+        $record = MaintenanceRecord::with(['template.items', 'employee', 'photos'])->find($id);
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
+
+        if ($record->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record is not pending for approval'
+            ], 400);
+        }
+
+        try {
+            // Get template data first (before generating PDF)
+            $templateData = $this->getTemplateData($record);
+
+            // Generate PDF with signatures
+            $pdfPath = $this->generateAndSavePDF($record, $admin, $templateData);
+
+            // Update record status and save PDF path (only update these specific fields)
+            $record->update([
+                'status' => 'accepted',
+                'pdf_path' => $pdfPath,
+            ]);
+
+            // Create approval record
+            MaintenanceApproval::create([
+                'maintenance_record_id' => $record->id,
+                'admin_id' => $admin->id,
+                'action' => 'accepted',
+                'notes' => $request->notes ?? null,
+            ]);
+
+            $record->load(['template', 'employee', 'photos', 'approvals.admin']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Record accepted successfully',
+                'data' => $record
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Accept Record Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to accept record: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject maintenance record
+     */
+    public function rejectRecord(Request $request, int $id): JsonResponse
+    {
+        $admin = $request->user();
+        $record = MaintenanceRecord::find($id);
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
+
+        if ($record->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record is not pending for approval'
+            ], 400);
+        }
+
+        try {
+            // Update record status (NO PDF saved)
+            $record->status = 'rejected';
+            $record->save();
+
+            // Create approval record
+            MaintenanceApproval::create([
+                'maintenance_record_id' => $record->id,
+                'admin_id' => $admin->id,
+                'action' => 'rejected',
+                'notes' => $request->notes ?? null,
+            ]);
+
+            $record->load(['template', 'employee', 'photos', 'approvals.admin']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Record rejected successfully',
+                'data' => $record
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Reject Record Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject record: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate and save PDF with signatures
+     */
+    private function generateAndSavePDF(MaintenanceRecord $record, User $admin, $templateData = null): string
+    {
+        try {
+            // Get template data (from template or snapshot) if not provided
+            if (!$templateData) {
+                $templateData = $this->getTemplateData($record);
+            }
+
+            // Create a temporary record copy for PDF view (don't modify original record)
+            $recordForPdf = clone $record;
+            $recordForPdf->template = $templateData;
+
+            // Format date to Indonesia format
+            $formatter = new \IntlDateFormatter(
+                'id_ID',
+                \IntlDateFormatter::FULL,
+                \IntlDateFormatter::NONE,
+                'Asia/Jakarta',
+                \IntlDateFormatter::GREGORIAN,
+                'EEEE, d MMMM yyyy'
+            );
+
+            $dateFormatted = $formatter->format(new \DateTime($record->created_at));
+
+            // Get storage URL for images
+            $storageUrl = asset('storage/');
+
+            // Generate checklist form page (Page 1) with signatures
+            $checklistHtml = view('pdfs.checklist', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => true,
+            ])->render();
+
+            // Generate device photo page (Page 2)
+            $devicePhotoHtml = view('pdfs.device_photo', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => true,
+            ])->render();
+
+            // Generate PIC proof page (Page 3)
+            $picProofHtml = view('pdfs.pic_proof', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => true,
+            ])->render();
+
+            // Combine all pages with proper page break style
+            $fullHtml = '
+        <html>
+        <head>
+            <style>
+                .page-break {
+                    page-break-after: always;
+                    page-break-inside: avoid;
+                    clear: both;
+                }
+            </style>
+        </head>
+        <body>
+            ' . $checklistHtml . '
+            <div class="page-break"></div>
+            ' . $devicePhotoHtml . '
+            <div class="page-break"></div>
+            ' . $picProofHtml . '
+        </body>
+        </html>';
+
+            // Generate PDF
+            $pdf = Pdf::loadHTML($fullHtml);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOption('enable-local-file-access', true);
+            $pdf->setOption('no-stop-slow-scripts', true);
+
+            // Save PDF to storage
+            $pdfPath = 'maintenance_pdfs/maintenance_record_' . $record->id . '_' . time() . '.pdf';
+            Storage::disk('public')->put($pdfPath, $pdf->output());
+
+            return $pdfPath;
+        } catch (\Exception $e) {
+            Log::error('PDF Save Error: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
@@ -362,16 +603,36 @@ class ChecklistController extends Controller
             $photoPath = $request->file('device_photo')->store('maintenance_photos', 'public');
         }
 
-        // Create maintenance record
+        // Get template to save snapshot
+        $template = ChecklistTemplate::with('items')->find($request->checklist_template_id);
+
+        // Create maintenance record with category and template snapshot
         $record = MaintenanceRecord::create([
             'checklist_template_id' => $request->checklist_template_id,
+            'category' => $template->category, // Store category directly
+            'template_snapshot' => [ // Store template structure as snapshot
+                'name' => $template->name,
+                'category' => $template->category,
+                'device_fields' => $template->device_fields,
+                'configuration_items' => $template->configuration_items,
+                'special_fields' => $template->special_fields,
+                'items' => $template->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'title' => $item->title,
+                        'columns' => $item->columns,
+                        'items' => $item->items,
+                        'order' => $item->order,
+                    ];
+                })->toArray(),
+            ],
             'employee_id' => $employee->id,
             'device_data' => $deviceData,
             'checklist_responses' => $checklistResponses,
             'stok_tinta_responses' => $stokTintaResponses,
             'notes' => $request->notes,
             'photo_path' => $photoPath,
-            'status' => 'completed',
+            'status' => 'pending',
         ]);
 
         // Create device photo record
@@ -404,11 +665,68 @@ class ChecklistController extends Controller
     }
 
     /**
-     * Generate PDF for maintenance record
+     * Get template data (from template or snapshot)
+     */
+    private function getTemplateData(MaintenanceRecord $record)
+    {
+        // If template exists, use it
+        if ($record->template) {
+            return (object) [
+                'name' => $record->template->name,
+                'category' => $record->template->category,
+                'device_fields' => $record->template->device_fields,
+                'configuration_items' => $record->template->configuration_items,
+                'special_fields' => $record->template->special_fields,
+                'items' => $record->template->items->map(function ($item) {
+                    return (object) [
+                        'id' => $item->id,
+                        'title' => $item->title,
+                        'columns' => $item->columns,
+                        'items' => $item->items,
+                        'order' => $item->order,
+                    ];
+                }),
+            ];
+        }
+
+        // Otherwise, use snapshot
+        if ($record->template_snapshot) {
+            $snapshot = $record->template_snapshot;
+            return (object) [
+                'name' => $snapshot['name'] ?? 'Unknown Template',
+                'category' => $snapshot['category'] ?? $record->category,
+                'device_fields' => $snapshot['device_fields'] ?? [],
+                'configuration_items' => $snapshot['configuration_items'] ?? [],
+                'special_fields' => $snapshot['special_fields'] ?? [],
+                'items' => collect($snapshot['items'] ?? [])->map(function ($item) {
+                    return (object) [
+                        'id' => $item['id'] ?? null,
+                        'title' => $item['title'] ?? '',
+                        'columns' => $item['columns'] ?? [],
+                        'items' => $item['items'] ?? [],
+                        'order' => $item['order'] ?? 0,
+                    ];
+                }),
+            ];
+        }
+
+        // Fallback if both don't exist
+        return (object) [
+            'name' => 'Unknown Template',
+            'category' => $record->category ?? 'unknown',
+            'device_fields' => [],
+            'configuration_items' => [],
+            'special_fields' => [],
+            'items' => collect([]),
+        ];
+    }
+
+    /**
+     * Generate PDF for maintenance record (preview/download)
      */
     public function generatePDF(Request $request, int $id)
     {
-        $record = MaintenanceRecord::with(['template.items', 'employee', 'photos'])->find($id);
+        $record = MaintenanceRecord::with(['template.items', 'employee', 'photos', 'approvals.admin'])->find($id);
 
         if (!$record) {
             return response()->json([
@@ -418,6 +736,24 @@ class ChecklistController extends Controller
         }
 
         try {
+            // If record is accepted and PDF exists, return saved PDF
+            if ($record->status === 'accepted' && $record->pdf_path && Storage::disk('public')->exists($record->pdf_path)) {
+                $pdfPath = Storage::disk('public')->path($record->pdf_path);
+                return response()->download($pdfPath, 'maintenance_record_' . $record->id . '.pdf');
+            }
+
+            // Otherwise, generate PDF on-the-fly (for preview or rejected records)
+            $admin = $record->status === 'accepted' && $record->approvals->where('action', 'accepted')->first()
+                ? $record->approvals->where('action', 'accepted')->first()->admin
+                : null;
+
+            // Get template data (from template or snapshot)
+            $templateData = $this->getTemplateData($record);
+
+            // Create a temporary record copy for PDF view (don't modify original record)
+            $recordForPdf = clone $record;
+            $recordForPdf->template = $templateData;
+
             // Format date to Indonesia format
             $formatter = new \IntlDateFormatter(
                 'id_ID',
@@ -433,25 +769,34 @@ class ChecklistController extends Controller
             // Get storage URL for images
             $storageUrl = asset('storage/');
 
+            // Show signatures only if accepted
+            $showSignatures = $record->status === 'accepted';
+
             // Generate checklist form page (Page 1)
             $checklistHtml = view('pdfs.checklist', [
-                'record' => $record,
+                'record' => $recordForPdf,
                 'date' => $dateFormatted,
                 'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
             ])->render();
 
             // Generate device photo page (Page 2)
             $devicePhotoHtml = view('pdfs.device_photo', [
-                'record' => $record,
+                'record' => $recordForPdf,
                 'date' => $dateFormatted,
                 'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
             ])->render();
 
             // Generate PIC proof page (Page 3)
             $picProofHtml = view('pdfs.pic_proof', [
-                'record' => $record,
+                'record' => $recordForPdf,
                 'date' => $dateFormatted,
                 'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
             ])->render();
 
             // Combine all pages with proper page break style
@@ -491,6 +836,113 @@ class ChecklistController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Preview PDF (return as response for iframe/embed)
+     */
+    public function previewPDF(Request $request, int $id)
+    {
+        $record = MaintenanceRecord::with(['template.items', 'employee', 'photos', 'approvals.admin'])->find($id);
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
+
+        try {
+            // If record is accepted and PDF exists, return saved PDF
+            if ($record->status === 'accepted' && $record->pdf_path && Storage::disk('public')->exists($record->pdf_path)) {
+                $pdfPath = Storage::disk('public')->path($record->pdf_path);
+                return response()->file($pdfPath);
+            }
+
+            // Otherwise, generate PDF on-the-fly
+            $admin = $record->status === 'accepted' && $record->approvals->where('action', 'accepted')->first()
+                ? $record->approvals->where('action', 'accepted')->first()->admin
+                : null;
+
+            // Get template data (from template or snapshot)
+            $templateData = $this->getTemplateData($record);
+
+            // Create a temporary record copy for PDF view (don't modify original record)
+            $recordForPdf = clone $record;
+            $recordForPdf->template = $templateData;
+
+            // Format date to Indonesia format
+            $formatter = new \IntlDateFormatter(
+                'id_ID',
+                \IntlDateFormatter::FULL,
+                \IntlDateFormatter::NONE,
+                'Asia/Jakarta',
+                \IntlDateFormatter::GREGORIAN,
+                'EEEE, d MMMM yyyy'
+            );
+
+            $dateFormatted = $formatter->format(new \DateTime($record->created_at));
+            $storageUrl = asset('storage/');
+            $showSignatures = $record->status === 'accepted';
+
+            // Generate all pages
+            $checklistHtml = view('pdfs.checklist', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
+            ])->render();
+
+            $devicePhotoHtml = view('pdfs.device_photo', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
+            ])->render();
+
+            $picProofHtml = view('pdfs.pic_proof', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => $showSignatures,
+            ])->render();
+
+            $fullHtml = '
+        <html>
+        <head>
+            <style>
+                .page-break {
+                    page-break-after: always;
+                    page-break-inside: avoid;
+                    clear: both;
+                }
+            </style>
+        </head>
+        <body>
+            ' . $checklistHtml . '
+            <div class="page-break"></div>
+            ' . $devicePhotoHtml . '
+            <div class="page-break"></div>
+            ' . $picProofHtml . '
+        </body>
+        </html>';
+
+            $pdf = Pdf::loadHTML($fullHtml);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOption('enable-local-file-access', true);
+            $pdf->setOption('no-stop-slow-scripts', true);
+
+            return $pdf->stream('maintenance_record_' . $record->id . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('PDF Preview Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to preview PDF: ' . $e->getMessage()
             ], 500);
         }
     }

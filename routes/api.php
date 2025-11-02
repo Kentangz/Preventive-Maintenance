@@ -37,7 +37,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/checklist-templates/{id}', [ChecklistController::class, 'updateTemplate']);
         Route::delete('/checklist-templates/{id}', [ChecklistController::class, 'deleteTemplate']);
         Route::post('/checklist-templates/{id}/duplicate', [ChecklistController::class, 'duplicateTemplate']);
-        Route::get('/maintenance-records', [ChecklistController::class, 'getMaintenanceRecords']); // List maintenance records for admin
+        Route::get('/maintenance-records', [ChecklistController::class, 'getMaintenanceRecords']); // List maintenance records for admin (accepted only)
+        Route::get('/maintenance-records/pending/{category}', [ChecklistController::class, 'getPendingRecords']); // Get pending records by category
+        Route::get('/maintenance-records/rejected/{category}', [ChecklistController::class, 'getRejectedRecords']); // Get rejected records by category
+        Route::post('/maintenance-records/{id}/accept', [ChecklistController::class, 'acceptRecord']); // Accept maintenance record
+        Route::post('/maintenance-records/{id}/reject', [ChecklistController::class, 'rejectRecord']); // Reject maintenance record
 
         // Schedule Routes (Admin only)
         Route::get('/schedules', [ScheduleController::class, 'index']);
@@ -56,5 +60,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // PDF Generation (Both admin and employee)
-    Route::get('/maintenance-records/{id}/pdf', [ChecklistController::class, 'generatePDF']);
+    Route::get('/maintenance-records/{id}/pdf', [ChecklistController::class, 'generatePDF']); // Download PDF
+    Route::get('/maintenance-records/{id}/preview', [ChecklistController::class, 'previewPDF']); // Preview PDF
 });

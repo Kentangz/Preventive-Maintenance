@@ -5,6 +5,8 @@ import ProfileForm from '../components/auth/ProfileForm'
 import ChecklistBuilder from '../components/maintenance/ChecklistBuilder'
 import TemplateList from '../components/maintenance/TemplateList'
 import MaintenanceRecordsList from '../components/maintenance/MaintenanceRecordsList'
+import AcceptManagement from '../components/maintenance/AcceptManagement'
+import CategoryManagement from '../components/maintenance/CategoryManagement'
 import ScheduleManagement from '../components/maintenance/ScheduleManagement'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
 import { Shield, Users, Settings, Activity, Plus } from 'lucide-react'
@@ -167,17 +169,7 @@ const AdminDashboard = () => {
       case 'vvip':
       case 'pc_desktop':
       case 'access_point':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground capitalize">{activeItem.replace('_', ' ')}</h1>
-              <p className="text-muted-foreground mt-2">
-                Daftar maintenance record untuk kategori {activeItem.replace('_', ' ')}
-              </p>
-            </div>
-            <MaintenanceRecordsList category={activeItem} />
-          </div>
-        )
+        return <CategoryManagement category={activeItem} />
 
       case 'schedule':
         return <ScheduleManagement />

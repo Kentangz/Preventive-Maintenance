@@ -34,7 +34,7 @@ const MaintenanceRecordsList = ({ category }) => {
   }, [fetchRecords])
 
   const handleDownloadPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
     const token = localStorage.getItem('auth_token')
     
     console.log('Downloading PDF for record:', recordId)
@@ -78,7 +78,7 @@ const MaintenanceRecordsList = ({ category }) => {
   }
 
   const handlePreviewPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
@@ -89,7 +89,7 @@ const MaintenanceRecordsList = ({ category }) => {
     setPreviewLoading(recordId)
     
     try {
-      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/pdf`, {
+      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/preview`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,7 +179,7 @@ const MaintenanceRecordsList = ({ category }) => {
                         {record.device_data?.device || 'Unknown Device'}
                       </h3>
                       <span className="px-2 py-1 text-xs rounded bg-primary/10 text-primary">
-                        {record.template?.category || 'Unknown'}
+                        {record.category || record.template?.category || 'Unknown'}
                       </span>
                     </div>
                     

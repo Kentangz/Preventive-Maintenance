@@ -11,16 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('schedules', function (Blueprint $table) {
-            $table->id();
-            $table->string('title'); 
-            $table->text('description')->nullable();
-            $table->string('document_path')->nullable(); 
-            $table->string('document_name')->nullable(); 
-            $table->string('document_type')->nullable(); 
-            $table->integer('document_size')->nullable(); 
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('schedules')) {
+            Schema::create('schedules', function (Blueprint $table) {
+                $table->id();
+                $table->string('title');
+                $table->text('description')->nullable();
+                $table->string('document_path')->nullable();
+                $table->string('document_name')->nullable();
+                $table->string('document_type')->nullable();
+                $table->integer('document_size')->nullable();
+                $table->timestamps();
+            });
+        } else {
+            // Table exists, just add missing column if needed
+            Schema::table('schedules', function (Blueprint $table) {
+                if (!Schema::hasColumn('schedules', 'schedule_date')) {
+                    $table->date('schedule_date')->nullable()->after('description');
+                }
+            });
+        }
     }
 
     /**
