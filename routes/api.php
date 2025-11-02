@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/maintenance-records/rejected/{category}', [ChecklistController::class, 'getRejectedRecords']); // Get rejected records by category
         Route::post('/maintenance-records/{id}/accept', [ChecklistController::class, 'acceptRecord']); // Accept maintenance record
         Route::post('/maintenance-records/{id}/reject', [ChecklistController::class, 'rejectRecord']); // Reject maintenance record
+        Route::delete('/maintenance-records/{id}/pdf', [ChecklistController::class, 'deletePDF']); // Delete PDF from record
 
         // Schedule Routes (Admin only)
         Route::get('/schedules', [ScheduleController::class, 'index']);

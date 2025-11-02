@@ -89,7 +89,6 @@ class ChecklistController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'category' => 'required|in:printer,switch,vvip,pc_desktop,access_point',
-            'name' => 'required|string|max:255',
             'device_fields' => 'required|array',
             'configuration_items' => 'required|array',
             'special_fields' => 'nullable|array',
@@ -110,9 +109,19 @@ class ChecklistController extends Controller
         }
 
         // Create template
+        // Generate name from category if not provided
+        $categoryNames = [
+            'printer' => 'Printer',
+            'switch' => 'Switch',
+            'vvip' => 'VVIP',
+            'pc_desktop' => 'PC/Desktop',
+            'access_point' => 'Access Point'
+        ];
+        $templateName = $request->name ?? ($categoryNames[$request->category] ?? ucfirst($request->category));
+
         $template = ChecklistTemplate::create([
             'category' => $request->category,
-            'name' => $request->name,
+            'name' => $templateName,
             'device_fields' => $request->device_fields,
             'configuration_items' => $request->configuration_items,
             'special_fields' => $request->special_fields ?? [],
@@ -157,7 +166,6 @@ class ChecklistController extends Controller
 
         $validator = Validator::make($request->all(), [
             'category' => 'sometimes|in:printer,switch,vvip,pc_desktop,access_point',
-            'name' => 'sometimes|string|max:255',
             'device_fields' => 'sometimes|array',
             'configuration_items' => 'sometimes|array',
             'special_fields' => 'sometimes|array',
@@ -178,14 +186,33 @@ class ChecklistController extends Controller
         }
 
         // Update template
-        $template->update($request->only([
-            'category',
-            'name',
+        // Generate name from category if category is being updated and name is not provided
+        $updateData = [];
+        if ($request->has('category') && !$request->has('name')) {
+            $categoryNames = [
+                'printer' => 'Printer',
+                'switch' => 'Switch',
+                'vvip' => 'VVIP',
+                'pc_desktop' => 'PC/Desktop',
+                'access_point' => 'Access Point'
+            ];
+            $updateData['name'] = $categoryNames[$request->category] ?? ucfirst($request->category);
+        }
+
+        $baseUpdateData = [
             'device_fields',
             'configuration_items',
             'special_fields',
             'is_active'
-        ]));
+        ];
+
+        if ($request->has('category')) {
+            $baseUpdateData[] = 'category';
+        }
+
+        $dataToUpdate = array_intersect_key($request->all(), array_flip($baseUpdateData));
+        $dataToUpdate = array_merge($updateData, $dataToUpdate);
+        $template->update($dataToUpdate);
 
         // Update items if provided
         if (isset($request->items)) {
@@ -586,7 +613,8 @@ class ChecklistController extends Controller
         $validator = Validator::make($request->all(), [
             'checklist_template_id' => 'required|exists:checklist_templates,id',
             'notes' => 'required|string',
-            'device_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'device_photos' => 'required|array|min:1|max:2',
+            'device_photos.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -597,11 +625,16 @@ class ChecklistController extends Controller
             ], 422);
         }
 
-        // Handle photo upload
-        $photoPath = null;
-        if ($request->hasFile('device_photo')) {
-            $photoPath = $request->file('device_photo')->store('maintenance_photos', 'public');
+        // Handle multiple photo uploads (max 2)
+        $photoPaths = [];
+        if ($request->hasFile('device_photos')) {
+            foreach ($request->file('device_photos') as $photo) {
+                $photoPath = $photo->store('maintenance_photos', 'public');
+                $photoPaths[] = $photoPath;
+            }
         }
+        // Use first photo as primary photo_path for backward compatibility
+        $primaryPhotoPath = !empty($photoPaths) ? $photoPaths[0] : null;
 
         // Get template to save snapshot
         $template = ChecklistTemplate::with('items')->find($request->checklist_template_id);
@@ -631,22 +664,32 @@ class ChecklistController extends Controller
             'checklist_responses' => $checklistResponses,
             'stok_tinta_responses' => $stokTintaResponses,
             'notes' => $request->notes,
-            'photo_path' => $photoPath,
+            'photo_path' => $primaryPhotoPath,
             'status' => 'pending',
         ]);
 
-        // Create device photo record
-        MaintenancePhoto::create([
-            'maintenance_record_id' => $record->id,
-            'photo_type' => 'device',
-            'photo_path' => $photoPath,
-        ]);
+        // Create device photo records for all uploaded photos
+        foreach ($photoPaths as $photoPath) {
+            MaintenancePhoto::create([
+                'maintenance_record_id' => $record->id,
+                'photo_type' => 'device',
+                'photo_path' => $photoPath,
+            ]);
+        }
 
-        // Create PIC proof photo
+        // Create PIC proof photo (use employee identity photo if available)
+        $picProofPath = null;
+        if ($employee->identity_photo) {
+            $picProofPath = $employee->identity_photo;
+        } else {
+            // Use first device photo as fallback
+            $picProofPath = $primaryPhotoPath;
+        }
+
         MaintenancePhoto::create([
             'maintenance_record_id' => $record->id,
             'photo_type' => 'pic_proof',
-            'photo_path' => $photoPath, // Will be replaced with actual PIC proof
+            'photo_path' => $picProofPath,
             'employee_data' => [
                 'name' => $employee->name,
                 'identity_photo' => $employee->identity_photo,
@@ -943,6 +986,51 @@ class ChecklistController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to preview PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete PDF from maintenance record (regenerate on next access)
+     */
+    public function deletePDF(Request $request, int $id): JsonResponse
+    {
+        $record = MaintenanceRecord::find($id);
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
+
+        if (!$record->pdf_path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PDF file not found'
+            ], 404);
+        }
+
+        try {
+            // Delete PDF file from storage
+            if (Storage::disk('public')->exists($record->pdf_path)) {
+                Storage::disk('public')->delete($record->pdf_path);
+            }
+
+            // Update record to remove pdf_path
+            $record->update([
+                'pdf_path' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF deleted successfully. PDF will be regenerated on next download.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Delete PDF Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete PDF: ' . $e->getMessage()
             ], 500);
         }
     }

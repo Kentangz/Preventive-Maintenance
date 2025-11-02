@@ -529,36 +529,36 @@
     <table class="signature-table">
       <tr>
         <td style="padding-right: 20px;">
-          <div style="margin-bottom: 5px; font-size: 12px;">
+          <div class="signature-title">Person In Charge, SIG</div>
+          <div style="margin-bottom: 5px; font-size: 12px; text-align: center;">
             @if(isset($showSignatures) && $showSignatures && isset($admin) && $admin && $admin->signature)
-              @php
-                $adminSignaturePath = storage_path('app/public/' . $admin->signature);
-              @endphp
-              @if(file_exists($adminSignaturePath))
-                <img src="data:image/png;base64,{{ base64_encode(file_get_contents($adminSignaturePath)) }}" 
-                     alt="Admin Signature" 
-                     style="max-width: 150px; max-height: 60px; margin-bottom: 5px;" />
-              @endif
+            @php
+            $adminSignaturePath = storage_path('app/public/' . $admin->signature);
+            @endphp
+            @if(file_exists($adminSignaturePath))
+            <img src="data:image/png;base64,{{ base64_encode(file_get_contents($adminSignaturePath)) }}"
+              alt="Admin Signature"
+              style="max-width: 150px; max-height: 60px; margin-bottom: 5px;" />
+            @endif
             @endif
           </div>
-          <div class="signature-title">Person In Charge, SIG</div>
           <div class="signature-name">{{ isset($admin) && $admin ? $admin->name : (is_array($record->template->device_fields) ? ($record->template->device_fields['admin_name'] ?? 'Admin') : ($record->template->device_fields ?? 'Admin')) }}</div>
         </td>
         <td style="padding-left: 20px;">
+          <div style="text-align: right; margin-bottom: 0px;margin-right: 60px; font-size: 12px;">{{ $record->device_data['opco'] ?? 'Tuban' }}, {{ $date }}</div>
+          <div class="signature-title">Officer Preventive Maintenance</div>
           <div style="text-align: right; margin-bottom: 5px;margin-right: 60px; font-size: 12px;">
             @if(isset($showSignatures) && $showSignatures && $record->employee && $record->employee->signature)
-              @php
-                $employeeSignaturePath = storage_path('app/public/' . $record->employee->signature);
-              @endphp
-              @if(file_exists($employeeSignaturePath))
-                <img src="data:image/png;base64,{{ base64_encode(file_get_contents($employeeSignaturePath)) }}" 
-                     alt="Employee Signature" 
-                     style="max-width: 150px; max-height: 60px; margin-bottom: 5px;" />
-              @endif
+            @php
+            $employeeSignaturePath = storage_path('app/public/' . $record->employee->signature);
+            @endphp
+            @if(file_exists($employeeSignaturePath))
+            <img src="data:image/png;base64,{{ base64_encode(file_get_contents($employeeSignaturePath)) }}"
+              alt="Employee Signature"
+              style="max-width: 150px; max-height: 60px; margin-bottom: 5px;" />
+            @endif
             @endif
           </div>
-          <div style="text-align: right; margin-bottom: 0px;margin-right: 60px; font-size: 12px;">{{ $record->device_data['location'] ?? 'Tuban' }}, {{ $date }}</div>
-          <div class="signature-title">Officer Preventive Maintenance</div>
           <div class="signature-name">{{ $record->employee->name }}</div>
         </td>
       </tr>

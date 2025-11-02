@@ -9,7 +9,6 @@ import api from '../../utils/api'
 const ChecklistBuilder = ({ category, template, onSave }) => {
   const [formData, setFormData] = useState({
     category: category || 'printer',
-    name: '',
     device_fields: {
       device: '',
       id_tagging_asset: '',
@@ -35,7 +34,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     if (template) {
       setFormData({
         category: template.category,
-        name: template.name,
         device_fields: template.device_fields,
         configuration_items: template.configuration_items,
         special_fields: template.special_fields || { stok_tinta: [] },
@@ -116,7 +114,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     newItems[sectionIndex].items.push({
       description: 'Ink/Toner/Ribbon Type', // Set default description
       isInkTonerRibbon: true,
-      colors: [], // Array untuk menyimpan warna-warna
+      colors: [],
       merge_columns: false
     })
     
@@ -342,17 +340,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             {/* Template Info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Template Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', null, e.target.value)}
-                  placeholder="Enter template name"
-                  required
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="is_active">Status</Label>
                 <div className="flex items-center gap-2 mt-2">
                   <input
@@ -561,21 +548,21 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                             ) : (
                               // Regular item UI
                               <div className="space-y-2">
-                                <div className="flex gap-2">
-                                  <Input
-                                    placeholder="Description"
-                                    value={subItem.description || ''}
-                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
-                                    className="flex-1"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Description"
+                                  value={subItem.description || ''}
+                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                                 </div>
                                 <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
                                   <input

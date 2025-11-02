@@ -21,10 +21,6 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
       
       if (response.data.success) {
         setTemplates(response.data.data)
-        // Auto-select first template if only one exists
-        if (response.data.data.length === 1) {
-          handleTemplateSelect(response.data.data[0])
-        }
       }
     } catch  {
       setError('Gagal memuat templates')
@@ -66,6 +62,7 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {templates.map((template) => (
         <Card
           key={template.id}
@@ -86,11 +83,36 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 {template.items?.length || 0} section checklist
               </p>
-              <div className="flex items-center gap-2">
+              
+              {/* Device Information */}
+              {template.device_fields && (
+                <div className="space-y-1.5 pt-2 border-t">
+                  {template.device_fields.merk_type && (
+                    <div className="text-xs">
+                      <span className="font-medium text-foreground">Merk/Type:</span>{' '}
+                      <span className="text-muted-foreground">{template.device_fields.merk_type}</span>
+                    </div>
+                  )}
+                  {template.device_fields.serial_number && (
+                    <div className="text-xs">
+                      <span className="font-medium text-foreground">Serial:</span>{' '}
+                      <span className="text-muted-foreground">{template.device_fields.serial_number}</span>
+                    </div>
+                  )}
+                  {template.device_fields.location && (
+                    <div className="text-xs">
+                      <span className="font-medium text-foreground">Location:</span>{' '}
+                      <span className="text-muted-foreground">{template.device_fields.location}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2 pt-2">
                 <span className={`text-xs px-2 py-1 rounded ${
                   template.is_active 
                     ? 'bg-green-100 text-green-800' 
@@ -103,6 +125,7 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
           </CardContent>
         </Card>
       ))}
+      </div>
     </div>
   )
 }

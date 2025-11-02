@@ -19,8 +19,10 @@ const ChecklistForm = ({ template }) => {
   const [checklistResponses, setChecklistResponses] = useState([])
   const [stokTintaResponses, setStokTintaResponses] = useState([])
   const [notes, setNotes] = useState('')
-  const [photo, setPhoto] = useState(null)
-  const [preview, setPreview] = useState(null)
+  const [photos, setPhotos] = useState([]) // Changed to array for multiple photos
+  const [previews, setPreviews] = useState([]) // Changed to array for multiple previews
+  const [stream, setStream] = useState(null) // For camera stream
+  const [showCamera, setShowCamera] = useState(false) // For camera UI
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -116,35 +118,99 @@ const ChecklistForm = ({ template }) => {
 
   const startCamera = async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ video: true })
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } // Use back camera on mobile
+      })
+      setStream(mediaStream)
+      setShowCamera(true)
       setError('')
-    } catch {
-      setError('Tidak dapat mengakses kamera')
+    } catch (err) {
+      setError('Tidak dapat mengakses kamera. Pastikan izin kamera sudah diberikan.')
+      console.error('Camera error:', err)
     }
   }
 
-  const _stopCamera = () => {
-    // Camera functionality removed for now
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+    setShowCamera(false)
   }
 
-  const _capturePhoto = () => {
-    // Camera functionality removed for now
+  const capturePhoto = () => {
+    const video = document.getElementById('camera-video')
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0)
+    
+    canvas.toBlob((blob) => {
+      if (blob && photos.length < 2) {
+        const file = new File([blob], `camera-photo-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        const previewUrl = URL.createObjectURL(file)
+        setPhotos([...photos, file])
+        setPreviews([...previews, previewUrl])
+        stopCamera()
+      }
+    }, 'image/jpeg', 0.9)
   }
 
   const handlePhotoChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      setPhoto(file)
-      setPreview(URL.createObjectURL(file))
+    const files = Array.from(e.target.files)
+    const remainingSlots = 2 - photos.length
+    
+    if (remainingSlots === 0) {
+      setError('Maksimal 2 foto')
+      return
     }
+    
+    const filesToAdd = files.slice(0, remainingSlots)
+    
+    filesToAdd.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const previewUrl = URL.createObjectURL(file)
+        setPhotos(prev => [...prev, file])
+        setPreviews(prev => [...prev, previewUrl])
+      }
+    })
   }
+
+  const removePhoto = (index) => {
+    // Revoke URL to prevent memory leak
+    URL.revokeObjectURL(previews[index])
+    setPhotos(photos.filter((_, i) => i !== index))
+    setPreviews(previews.filter((_, i) => i !== index))
+  }
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [stream])
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [previews])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
     // Validation
-    if (!photo) {
-      setError('Foto perangkat wajib diisi')
+    if (photos.length === 0) {
+      setError('Minimal 1 foto perangkat wajib diisi')
+      return
+    }
+    
+    if (photos.length > 2) {
+      setError('Maksimal 2 foto perangkat')
       return
     }
 
@@ -192,7 +258,11 @@ const ChecklistForm = ({ template }) => {
       formData.append('checklist_responses', JSON.stringify(checklistResponses))
       formData.append('stok_tinta_responses', JSON.stringify(stokTintaResponses))
       formData.append('notes', notes)
-      formData.append('device_photo', photo)
+      
+      // Append multiple photos
+      photos.forEach((photo) => {
+        formData.append(`device_photos[]`, photo)
+      })
 
       const response = await api.post('/employee/maintenance-records', formData, {
         headers: {
@@ -214,8 +284,11 @@ const ChecklistForm = ({ template }) => {
         setChecklistResponses([])
         setStokTintaResponses([])
         setNotes('')
-        setPhoto(null)
-        setPreview(null)
+        // Cleanup preview URLs
+        previews.forEach(url => URL.revokeObjectURL(url))
+        setPhotos([])
+        setPreviews([])
+        stopCamera()
       }
     } catch (err) {
       console.error('Error:', err.response?.data)
@@ -508,15 +581,42 @@ const ChecklistForm = ({ template }) => {
       <Card>
         <CardHeader>
           <CardTitle>Foto Perangkat</CardTitle>
-          <CardDescription>Ambil foto perangkat setelah maintenance</CardDescription>
+          <CardDescription>Ambil foto perangkat setelah maintenance (Maksimal 2 foto)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {!preview && (
+            {/* Camera Preview */}
+            {showCamera && stream && (
+              <div className="space-y-3 border-2 border-border rounded-lg p-4">
+                <video
+                  id="camera-video"
+                  autoPlay
+                  playsInline
+                  ref={(video) => {
+                    if (video && stream) {
+                      video.srcObject = stream
+                    }
+                  }}
+                  className="w-full max-w-md mx-auto rounded-lg border"
+                />
+                <div className="flex gap-2 justify-center">
+                  <Button type="button" variant="outline" onClick={capturePhoto}>
+                    <Camera className="h-4 w-4 mr-2" />
+                    Ambil Foto
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={stopCamera}>
+                    Tutup Kamera
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Upload Options - Only show if camera is not active and less than 2 photos */}
+            {!showCamera && photos.length < 2 && (
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                 <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground mb-4">
-                  Ambil foto perangkat dengan kamera
+                  Ambil foto perangkat dengan kamera atau upload dari file
                 </p>
                 <div className="flex gap-2 justify-center">
                   <Button type="button" variant="outline" onClick={startCamera}>
@@ -533,32 +633,38 @@ const ChecklistForm = ({ template }) => {
                       accept="image/*"
                       onChange={handlePhotoChange}
                       className="hidden"
+                      multiple
                     />
                   </label>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {photos.length}/2 foto terupload
+                </p>
               </div>
             )}
 
-            {preview && (
-              <div className="space-y-2">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-full max-w-md mx-auto rounded-lg border"
-                />
-                <div className="text-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPhoto(null)
-                      setPreview(null)
-                    }}
-                  >
-                    Hapus Foto
-                  </Button>
-                </div>
+            {/* Photo Previews */}
+            {previews.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                {previews.map((preview, index) => (
+                  <div key={index} className="space-y-2">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full rounded-lg border"
+                    />
+                    <div className="text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removePhoto(index)}
+                      >
+                        Hapus Foto {index + 1}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

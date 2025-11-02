@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import AlertDialog from '../ui/AlertDialog'
 import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -15,6 +16,13 @@ const TemplateList = ({ onEdit, onRefresh }) => {
   const [sortOrder, setSortOrder] = useState('desc')
   const [deletingId, setDeletingId] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: null,
+    variant: 'default'
+  })
 
   useEffect(() => {
     fetchTemplates()
@@ -29,30 +37,35 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         setTemplates(response.data.data)
       }
     } catch {
-      setError('Gagal memuat templates')
+      setError('Failed to load templates')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus template ini?')) {
-      return
-    }
-
-    try {
-      setDeletingId(id)
-      const response = await api.delete(`/admin/checklist-templates/${id}`)
-      
-      if (response.data.success) {
-        setTemplates(templates.filter(t => t.id !== id))
-        if (onRefresh) onRefresh()
-      }
-    } catch {
-      setError('Gagal menghapus template')
-    } finally {
-      setDeletingId(null)
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Template',
+      description: 'Are you sure you want to delete this template? Records created with this template will still be saved.',
+      onConfirm: async () => {
+        try {
+          setDeletingId(id)
+          const response = await api.delete(`/admin/checklist-templates/${id}`)
+          
+          if (response.data.success) {
+            setTemplates(templates.filter(t => t.id !== id))
+            if (onRefresh) onRefresh()
+            setError('')
+          }
+        } catch {
+          setError('Failed to delete template')
+        } finally {
+          setDeletingId(null)
+        }
+      },
+      variant: 'destructive'
+    })
   }
 
   const handleDuplicate = async (template) => {
@@ -68,7 +81,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         setError('')
       }
     } catch {
-      setError('Gagal menduplikasi template')
+      setError('Failed to duplicate template')
     } finally {
       setDuplicatingId(null)
     }
@@ -126,13 +139,25 @@ const TemplateList = ({ onEdit, onRefresh }) => {
     return (
       <div className="text-center py-8">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Memuat templates...</p>
+        <p className="text-muted-foreground">Loading templates...</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText="Ya"
+        cancelText="Batal"
+        onConfirm={confirmDialog.onConfirm || (() => {})}
+        variant={confirmDialog.variant}
+      />
+
       {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
@@ -178,7 +203,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">Belum ada template</p>
+            <p className="text-muted-foreground">No template</p>
           </CardContent>
         </Card>
       ) : (
@@ -187,9 +212,9 @@ const TemplateList = ({ onEdit, onRefresh }) => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Daftar Template ({filteredTemplates.length})</h3>
+                <h3 className="text-lg font-semibold">Template List ({filteredTemplates.length})</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Urutkan berdasarkan:</span>
+                  <span className="text-sm text-muted-foreground">Sort by:</span>
                   <div className="flex gap-1">
                     <Button
                       variant={sortBy === 'name' ? 'default' : 'outline'}
@@ -275,7 +300,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                       ) : (
                         <>
                           <Copy className="h-4 w-4 mr-2" />
-                          Duplikat
+                          Duplicate
                         </>
                       )}
                     </Button>
@@ -291,7 +316,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                       ) : (
                         <>
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Hapus
+                          Delete
                         </>
                       )}
                     </Button>

@@ -63,11 +63,6 @@ const Sidebar = ({ activeItem, onItemClick }) => {
       label: 'Documents',
       icon: Files,
     },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: User,
-    },
   ]
 
   const employeeMenuItems = [
@@ -100,11 +95,6 @@ const Sidebar = ({ activeItem, onItemClick }) => {
       id: 'access_point',
       label: 'Access Point',
       icon: Network,
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: User,
     },
   ]
 

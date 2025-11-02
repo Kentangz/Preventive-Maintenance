@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import AlertDialog from '../ui/AlertDialog'
 import { Search, Loader2, Download, Eye, Check, X, FileText, User, Calendar } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -15,6 +16,13 @@ const AcceptManagement = ({ category }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [previewLoading, setPreviewLoading] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: null,
+    variant: 'default'
+  })
 
   useEffect(() => {
     fetchPendingRecords()
@@ -51,7 +59,7 @@ const AcceptManagement = ({ category }) => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-      setError('Anda harus login terlebih dahulu')
+      setError('Invalid Credentials')
       return
     }
     
@@ -74,10 +82,10 @@ const AcceptManagement = ({ category }) => {
           window.URL.revokeObjectURL(url)
         }, 10000)
       } else {
-        setError('Gagal membuka preview PDF')
+        setError('Failed to open preview PDF')
       }
     } catch (error) {
-      setError('Gagal membuka preview PDF: ' + error.message)
+      setError('Failed to open preview PDF: ' + error.message)
     } finally {
       setPreviewLoading(null)
     }
@@ -88,7 +96,7 @@ const AcceptManagement = ({ category }) => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-      setError('Anda harus login terlebih dahulu')
+      setError('Invalid Credentials')
       return
     }
     
@@ -112,57 +120,65 @@ const AcceptManagement = ({ category }) => {
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       } else {
-        setError('Gagal mengunduh PDF')
+        setError('Failed to download PDF')
       }
     } catch (error) {
-      setError('Gagal mengunduh PDF: ' + error.message)
+      setError('Failed to download PDF: ' + error.message)
     }
   }
 
   const handleAccept = async (recordId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menerima submission ini?')) {
-      return
-    }
-
-    setActionLoading(recordId)
-    setError('')
-    setMessage('')
-    
-    try {
-      const response = await api.post(`/admin/maintenance-records/${recordId}/accept`)
-      if (response.data.success) {
-        setMessage('Record berhasil diterima')
-        fetchPendingRecords()
-        fetchRejectedRecords()
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Gagal menerima record')
-    } finally {
-      setActionLoading(null)
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Terima Submission',
+      description: 'Are you sure you want to accept this submission?',
+      onConfirm: async () => {
+        setActionLoading(recordId)
+        setError('')
+        setMessage('')
+        
+        try {
+          const response = await api.post(`/admin/maintenance-records/${recordId}/accept`)
+          if (response.data.success) {
+            setMessage('Record accepted successfully')
+            fetchPendingRecords()
+            fetchRejectedRecords()
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to accept record')
+        } finally {
+          setActionLoading(null)
+        }
+      },
+      variant: 'default'
+    })
   }
 
   const handleReject = async (recordId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menolak submission ini?')) {
-      return
-    }
-
-    setActionLoading(recordId)
-    setError('')
-    setMessage('')
-    
-    try {
-      const response = await api.post(`/admin/maintenance-records/${recordId}/reject`)
-      if (response.data.success) {
-        setMessage('Record berhasil ditolak')
-        fetchPendingRecords()
-        fetchRejectedRecords()
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Gagal menolak record')
-    } finally {
-      setActionLoading(null)
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Tolak Submission',
+      description: 'Are you sure you want to reject this submission?',
+      onConfirm: async () => {
+        setActionLoading(recordId)
+        setError('')
+        setMessage('')
+        
+        try {
+          const response = await api.post(`/admin/maintenance-records/${recordId}/reject`)
+          if (response.data.success) {
+            setMessage('Record rejected successfully')
+            fetchPendingRecords()
+            fetchRejectedRecords()
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to reject record')
+        } finally {
+          setActionLoading(null)
+        }
+      },
+      variant: 'destructive'
+    })
   }
 
   const filteredPendingRecords = pendingRecords.filter(record => {
@@ -183,6 +199,18 @@ const AcceptManagement = ({ category }) => {
 
   return (
     <div className="space-y-6">
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText="Ya"
+        cancelText="Batal"
+        onConfirm={confirmDialog.onConfirm || (() => {})}
+        variant={confirmDialog.variant}
+      />
+
       {message && (
         <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
           {message}
@@ -241,7 +269,7 @@ const AcceptManagement = ({ category }) => {
         <Card>
           <CardContent className="p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Memuat records...</p>
+            <p className="text-muted-foreground">Loading records...</p>
           </CardContent>
         </Card>
       ) : recordsToShow.length === 0 ? (
@@ -249,7 +277,7 @@ const AcceptManagement = ({ category }) => {
           <CardContent className="p-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground">
-              Belum ada {activeTab === 'pending' ? 'pending' : 'rejected'} records
+              No {activeTab === 'pending' ? 'pending' : 'rejected'} records
             </p>
           </CardContent>
         </Card>

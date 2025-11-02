@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
+import AlertDialog from '../ui/AlertDialog'
 import { Plus, Trash2, Edit, Download, Loader2, Files as FilesIcon } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -17,6 +18,13 @@ const ScheduleManagement = () => {
     title: '',
     description: '',
     document: null
+  })
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: null,
+    variant: 'default'
   })
 
   useEffect(() => {
@@ -110,22 +118,26 @@ const ScheduleManagement = () => {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this schedule?')) {
-      return
-    }
-
-    setLoading(true)
-    try {
-      const response = await api.delete(`/admin/schedules/${id}`)
-      if (response.data.success) {
-        setMessage('Schedule deleted successfully')
-        fetchSchedules()
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete schedule')
-    } finally {
-      setLoading(false)
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Dokumen',
+      description: 'Apakah Anda yakin ingin menghapus dokumen ini?',
+      onConfirm: async () => {
+        setLoading(true)
+        try {
+          const response = await api.delete(`/admin/schedules/${id}`)
+          if (response.data.success) {
+            setMessage('Dokumen berhasil dihapus')
+            fetchSchedules()
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Gagal menghapus dokumen')
+        } finally {
+          setLoading(false)
+        }
+      },
+      variant: 'destructive'
+    })
   }
 
   const handleDownload = async (id) => {
@@ -134,7 +146,6 @@ const ScheduleManagement = () => {
         responseType: 'blob'
       })
       
-      // Create blob URL and trigger download
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
@@ -188,6 +199,18 @@ const ScheduleManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText="Ya"
+        cancelText="Batal"
+        onConfirm={confirmDialog.onConfirm || (() => {})}
+        variant={confirmDialog.variant}
+      />
+
       {message && (
         <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
           {message}

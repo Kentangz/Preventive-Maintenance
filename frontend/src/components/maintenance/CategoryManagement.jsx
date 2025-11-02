@@ -12,7 +12,7 @@ const CategoryManagement = ({ category }) => {
       <div>
         <h1 className="text-3xl font-bold text-foreground capitalize">{categoryLabel}</h1>
         <p className="text-muted-foreground mt-2">
-          Kelola maintenance records untuk kategori {categoryLabel}
+          Manage maintenance records for category {categoryLabel}
         </p>
       </div>
 
@@ -27,7 +27,7 @@ const CategoryManagement = ({ category }) => {
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
             }`}
           >
-            Records
+            Maintenance Records
           </button>
           <button
             onClick={() => setActiveTab('accept')}
@@ -37,7 +37,7 @@ const CategoryManagement = ({ category }) => {
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
             }`}
           >
-            Accept
+            Acceptance
           </button>
         </nav>
       </div>

@@ -2,15 +2,25 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { Search, Loader2, Download, FileText, User, Calendar, Eye } from 'lucide-react'
+import AlertDialog from '../ui/AlertDialog'
+import { Search, Loader2, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
 import api from '../../utils/api'
 
 const MaintenanceRecordsList = ({ category }) => {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [previewLoading, setPreviewLoading] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: null,
+    variant: 'default'
+  })
 
   const fetchRecords = useCallback(async () => {
     try {
@@ -23,7 +33,7 @@ const MaintenanceRecordsList = ({ category }) => {
         setRecords(response.data.data)
       }
     } catch {
-      setError('Gagal memuat maintenance records')
+      setError('Failed to load maintenance records')
     } finally {
       setLoading(false)
     }
@@ -37,11 +47,8 @@ const MaintenanceRecordsList = ({ category }) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
     const token = localStorage.getItem('auth_token')
     
-    console.log('Downloading PDF for record:', recordId)
-    console.log('Token:', token ? 'Token exists' : 'No token')
-    
     if (!token) {
-      setError('Anda harus login terlebih dahulu')
+      setError('Invalid Credentials')
       return
     }
     
@@ -53,8 +60,6 @@ const MaintenanceRecordsList = ({ category }) => {
           'Accept': 'application/pdf'
         }
       })
-      
-      console.log('Response status:', response.status)
       
       if (response.ok) {
         const blob = await response.blob()
@@ -69,12 +74,38 @@ const MaintenanceRecordsList = ({ category }) => {
       } else {
         const errorText = await response.text()
         console.error('Error response:', errorText)
-        setError('Gagal mengunduh PDF')
+        setError('Failed to download PDF')
       }
     } catch (error) {
       console.error('Error downloading PDF:', error)
-      setError('Gagal mengunduh PDF: ' + error.message)
+      setError('Failed to download PDF: ' + error.message)
     }
+  }
+
+  const handleDeletePDF = async (recordId) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Delete PDF',
+      description: 'Are you sure you want to delete this PDF from the database? It is recommended to download the PDF before deleting.',  
+      onConfirm: async () => {
+        setDeleteLoading(recordId)
+        setError('')
+        setMessage('')
+        
+        try {
+          const response = await api.delete(`/admin/maintenance-records/${recordId}/pdf`)
+          if (response.data.success) {
+            setMessage(response.data.message || 'PDF deleted successfully')
+            fetchRecords()
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to delete PDF')
+        } finally {
+          setDeleteLoading(null)
+        }
+      },
+      variant: 'destructive'
+    })
   }
 
   const handlePreviewPDF = async (recordId) => {
@@ -82,7 +113,7 @@ const MaintenanceRecordsList = ({ category }) => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-      setError('Anda harus login terlebih dahulu')
+      setError('Invalid Credentials')
       return
     }
     
@@ -100,20 +131,18 @@ const MaintenanceRecordsList = ({ category }) => {
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
-        // Buka PDF di tab baru untuk preview
         window.open(url, '_blank')
-        // Cleanup URL setelah beberapa detik
         setTimeout(() => {
           window.URL.revokeObjectURL(url)
         }, 10000)
       } else {
         const errorText = await response.text()
         console.error('Error response:', errorText)
-        setError('Gagal membuka preview PDF')
+        setError('Failed to open preview PDF')
       }
     } catch (error) {
       console.error('Error previewing PDF:', error)
-      setError('Gagal membuka preview PDF: ' + error.message)
+      setError('Failed to open preview PDF: ' + error.message)
     } finally {
       setPreviewLoading(null)
     }
@@ -130,13 +159,31 @@ const MaintenanceRecordsList = ({ category }) => {
     return (
       <div className="text-center py-8">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Memuat records...</p>
+        <p className="text-muted-foreground">Loading records...</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText="Ya"
+        cancelText="Batal"
+        onConfirm={confirmDialog.onConfirm || (() => {})}
+        variant={confirmDialog.variant}
+      />
+
+      {message && (
+        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+          {message}
+        </div>
+      )}
+
       {/* Search */}
       <Card>
         <CardContent className="p-4">
@@ -164,7 +211,7 @@ const MaintenanceRecordsList = ({ category }) => {
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">Belum ada maintenance record</p>
+            <p className="text-muted-foreground">No maintenance record</p>
           </CardContent>
         </Card>
       ) : (
@@ -193,7 +240,7 @@ const MaintenanceRecordsList = ({ category }) => {
                         <span>{new Date(record.created_at).toLocaleDateString('id-ID')}</span>
                       </div>
                       <div>
-                        <strong>Location:</strong> {record.device_data?.location || '-'}
+                        <strong>Location:</strong> {record.device_data?.location || 'Unknown'}
                       </div>
                       <div>
                         <strong>Serial Number:</strong> {record.device_data?.serial_number || '-'}
@@ -223,6 +270,22 @@ const MaintenanceRecordsList = ({ category }) => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
+                    {record.status === 'accepted' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeletePDF(record.id)}
+                        disabled={deleteLoading === record.id}
+                        title={record.pdf_path ? 'Delete saved PDF' : 'PDF will be regenerated when downloaded'}
+                      >
+                        {deleteLoading === record.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Delete PDF
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
