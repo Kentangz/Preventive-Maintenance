@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
+import Alert from '../ui/Alert'
 import { User, Mail, Upload, Loader2, X } from 'lucide-react'
 
 const ProfileForm = () => {
@@ -76,15 +77,19 @@ const ProfileForm = () => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              {message}
-            </div>
+            <Alert
+              variant="success"
+              message={message}
+              onClose={() => setMessage('')}
+            />
           )}
           
           {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-              {error}
-            </div>
+            <Alert
+              variant="error"
+              message={error}
+              onClose={() => setError('')}
+            />
           )}
 
           <div className="space-y-2">

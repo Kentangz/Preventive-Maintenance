@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
+import Alert from '../ui/Alert'
 import { CheckCircle, XCircle, Camera, Loader2, Upload } from 'lucide-react'
 import api from '../../utils/api'
 
-const ChecklistForm = ({ template }) => {
+const ChecklistForm = ({ template, onSuccess }) => {
   const [deviceData, setDeviceData] = useState({
     device: '',
     id_tagging_asset: '',
@@ -271,7 +272,9 @@ const ChecklistForm = ({ template }) => {
       })
 
       if (response.data.success) {
-        setMessage('Maintenance record berhasil disimpan')
+        const successMsg = 'Maintenance record berhasil disimpan'
+        setMessage(successMsg)
+        
         // Reset form
         setDeviceData({
           device: '',
@@ -289,6 +292,14 @@ const ChecklistForm = ({ template }) => {
         setPhotos([])
         setPreviews([])
         stopCamera()
+        
+        // Call onSuccess callback to return to template selector after 1 second
+        // Pass success message to parent
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess(successMsg)
+          }
+        }, 1000)
       }
     } catch (err) {
       console.error('Error:', err.response?.data)
@@ -311,15 +322,19 @@ const ChecklistForm = ({ template }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {message && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
+        <Alert
+          variant="success"
+          message={message}
+          onClose={() => setMessage('')}
+        />
       )}
       
       {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-          {error}
-        </div>
+        <Alert
+          variant="error"
+          message={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Device Data */}

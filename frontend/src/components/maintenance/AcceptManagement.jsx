@@ -3,10 +3,11 @@ import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
-import { Search, Loader2, Download, Eye, Check, X, FileText, User, Calendar } from 'lucide-react'
+import Alert from '../ui/Alert'
+import { Search, Loader2, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } from 'lucide-react'
 import api from '../../utils/api'
 
-const AcceptManagement = ({ category }) => {
+const AcceptManagement = ({ category, onPendingCountChange }) => {
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'rejected'
   const [pendingRecords, setPendingRecords] = useState([])
   const [rejectedRecords, setRejectedRecords] = useState([])
@@ -16,6 +17,7 @@ const AcceptManagement = ({ category }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [previewLoading, setPreviewLoading] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -35,9 +37,16 @@ const AcceptManagement = ({ category }) => {
       const response = await api.get(`/admin/maintenance-records/pending/${category}`)
       if (response.data.success) {
         setPendingRecords(response.data.data)
+        // Notify parent about pending count change
+        if (onPendingCountChange) {
+          onPendingCountChange(response.data.data?.length || 0)
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Gagal memuat pending records')
+      if (onPendingCountChange) {
+        onPendingCountChange(0)
+      }
     } finally {
       setLoading(false)
     }
@@ -143,6 +152,7 @@ const AcceptManagement = ({ category }) => {
             setMessage('Record accepted successfully')
             fetchPendingRecords()
             fetchRejectedRecords()
+            // Count will be updated via fetchPendingRecords callback
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Failed to accept record')
@@ -170,11 +180,46 @@ const AcceptManagement = ({ category }) => {
             setMessage('Record rejected successfully')
             fetchPendingRecords()
             fetchRejectedRecords()
+            // Count will be updated via fetchPendingRecords callback
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Failed to reject record')
         } finally {
           setActionLoading(null)
+        }
+      },
+      variant: 'destructive'
+    })
+  }
+
+  const handleDeleteRecord = async (recordId) => {
+    const record = activeTab === 'pending' 
+      ? pendingRecords.find(r => r.id === recordId)
+      : rejectedRecords.find(r => r.id === recordId)
+    const deviceName = record?.device_data?.device || 'this record'
+    const statusText = activeTab === 'pending' ? 'pending' : 'rejected'
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Maintenance Record',
+      description: `Are you sure you want to permanently delete the ${statusText} maintenance record for "${deviceName}"? This action cannot be undone. All data including photos and records will be permanently deleted.`,  
+      onConfirm: async () => {
+        setDeleteLoading(recordId)
+        setError('')
+        setMessage('')
+        
+        try {
+          const response = await api.delete(`/admin/maintenance-records/${recordId}`)
+          if (response.data.success) {
+            setMessage('Record deleted successfully')
+            fetchPendingRecords()
+            fetchRejectedRecords()
+            // Count will be updated via fetchPendingRecords callback
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to delete record')
+        } finally {
+          setDeleteLoading(null)
         }
       },
       variant: 'destructive'
@@ -212,15 +257,19 @@ const AcceptManagement = ({ category }) => {
       />
 
       {message && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
+        <Alert
+          variant="success"
+          message={message}
+          onClose={() => setMessage('')}
+        />
       )}
       
       {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-          {error}
-        </div>
+        <Alert
+          variant="error"
+          message={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Tabs */}
@@ -325,7 +374,7 @@ const AcceptManagement = ({ category }) => {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePreviewPDF(record.id)}
-                      disabled={previewLoading === record.id}
+                      disabled={previewLoading === record.id || deleteLoading === record.id}
                     >
                       {previewLoading === record.id ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -338,6 +387,7 @@ const AcceptManagement = ({ category }) => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownloadPDF(record.id)}
+                      disabled={deleteLoading === record.id}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download
@@ -371,6 +421,23 @@ const AcceptManagement = ({ category }) => {
                           Reject
                         </Button>
                       </>
+                    )}
+                    {activeTab === 'rejected' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteRecord(record.id)}
+                        disabled={deleteLoading === record.id}
+                        title="Permanently delete this maintenance record"
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {deleteLoading === record.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Delete
+                      </Button>
                     )}
                   </div>
                 </div>

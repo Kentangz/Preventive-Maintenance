@@ -1034,4 +1034,57 @@ class ChecklistController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Delete maintenance record completely (including PDF, photos, and all related data)
+     */
+    public function deleteRecord(Request $request, int $id): JsonResponse
+    {
+        $record = MaintenanceRecord::with(['photos'])->find($id);
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
+
+        try {
+            // Delete PDF file from storage (if exists)
+            if ($record->pdf_path && Storage::disk('public')->exists($record->pdf_path)) {
+                Storage::disk('public')->delete($record->pdf_path);
+            }
+
+            // Delete photo file from storage (if exists)
+            if ($record->photo_path && Storage::disk('public')->exists($record->photo_path)) {
+                Storage::disk('public')->delete($record->photo_path);
+            }
+
+            // Delete all related photos from storage and database
+            foreach ($record->photos as $photo) {
+                if ($photo->photo_path && Storage::disk('public')->exists($photo->photo_path)) {
+                    Storage::disk('public')->delete($photo->photo_path);
+                }
+                $photo->delete();
+            }
+
+            // Delete all approvals (cascade will handle this, but we'll do it explicitly)
+            MaintenanceApproval::where('maintenance_record_id', $record->id)->delete();
+
+            // Delete the record itself
+            $record->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Maintenance record deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Delete Record Error: ' . $e->getMessage());
+            Log::error('Stack Trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete record: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

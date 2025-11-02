@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { User, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Button } from '../components/ui/Button'
+import Alert from '../components/ui/Alert'
 
 const EmployeeDashboard = () => {
   const [activeItem, setActiveItem] = useState('dashboard')
   const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [successMessage, setSuccessMessage] = useState('')
   const { employee } = useAuth()
 
   // Reset selectedTemplate when switching categories
@@ -20,6 +22,11 @@ const EmployeeDashboard = () => {
     if (categoryItems.includes(activeItem)) {
       setSelectedTemplate(null)
     }
+  }, [activeItem])
+
+  // Clear success message when switching categories
+  useEffect(() => {
+    setSuccessMessage('')
   }, [activeItem])
 
   const renderContent = () => {
@@ -56,6 +63,16 @@ const EmployeeDashboard = () => {
               </p>
             </div>
             
+            {/* Success Message */}
+            {successMessage && (
+              <Alert
+                variant="success"
+                title="Berhasil Disimpan!"
+                message={successMessage}
+                onClose={() => setSuccessMessage('')}
+              />
+            )}
+
             {!selectedTemplate ? (
               <ChecklistTemplateSelector 
                 category={activeItem} 
@@ -66,7 +83,18 @@ const EmployeeDashboard = () => {
                 <Button variant="outline" onClick={() => setSelectedTemplate(null)}>
                   ← Kembali ke Pilih Template
                 </Button>
-                <ChecklistForm category={activeItem} template={selectedTemplate} />
+                <ChecklistForm 
+                  category={activeItem} 
+                  template={selectedTemplate} 
+                  onSuccess={(message) => {
+                    setSuccessMessage(message || 'Maintenance record berhasil disimpan')
+                    setSelectedTemplate(null)
+                    // Auto-hide message after 5 seconds
+                    setTimeout(() => {
+                      setSuccessMessage('')
+                    }, 5000)
+                  }}
+                />
               </div>
             )}
           </div>

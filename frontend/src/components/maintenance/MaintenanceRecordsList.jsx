@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
+import Alert from '../ui/Alert'
 import { Search, Loader2, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -13,7 +14,7 @@ const MaintenanceRecordsList = ({ category }) => {
   const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [previewLoading, setPreviewLoading] = useState(null)
-  const [deleteLoading, setDeleteLoading] = useState(null)
+  const [deleteRecordLoading, setDeleteRecordLoading] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -82,26 +83,29 @@ const MaintenanceRecordsList = ({ category }) => {
     }
   }
 
-  const handleDeletePDF = async (recordId) => {
+  const handleDeleteRecord = async (recordId) => {
+    const record = records.find(r => r.id === recordId)
+    const deviceName = record?.device_data?.device || 'this record'
+    
     setConfirmDialog({
       open: true,
-      title: 'Delete PDF',
-      description: 'Are you sure you want to delete this PDF from the database? It is recommended to download the PDF before deleting.',  
+      title: 'Delete Maintenance Record',
+      description: `Are you sure you want to permanently delete the maintenance record for "${deviceName}"? This action cannot be undone. All data including PDF, photos, and records will be permanently deleted.`,  
       onConfirm: async () => {
-        setDeleteLoading(recordId)
+        setDeleteRecordLoading(recordId)
         setError('')
         setMessage('')
         
         try {
-          const response = await api.delete(`/admin/maintenance-records/${recordId}/pdf`)
+          const response = await api.delete(`/admin/maintenance-records/${recordId}`)
           if (response.data.success) {
-            setMessage(response.data.message || 'PDF deleted successfully')
+            setMessage(response.data.message || 'Record deleted successfully')
             fetchRecords()
           }
         } catch (err) {
-          setError(err.response?.data?.message || 'Failed to delete PDF')
+          setError(err.response?.data?.message || 'Failed to delete record')
         } finally {
-          setDeleteLoading(null)
+          setDeleteRecordLoading(null)
         }
       },
       variant: 'destructive'
@@ -179,9 +183,19 @@ const MaintenanceRecordsList = ({ category }) => {
       />
 
       {message && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
+        <Alert
+          variant="success"
+          message={message}
+          onClose={() => setMessage('')}
+        />
+      )}
+
+      {error && (
+        <Alert
+          variant="error"
+          message={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Search */}
@@ -198,13 +212,6 @@ const MaintenanceRecordsList = ({ category }) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Error Message */}
-      {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-          {error}
-        </div>
-      )}
 
       {/* Records List */}
       {filteredRecords.length === 0 ? (
@@ -270,22 +277,21 @@ const MaintenanceRecordsList = ({ category }) => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    {record.status === 'accepted' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeletePDF(record.id)}
-                        disabled={deleteLoading === record.id}
-                        title={record.pdf_path ? 'Delete saved PDF' : 'PDF will be regenerated when downloaded'}
-                      >
-                        {deleteLoading === record.id ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 mr-2" />
-                        )}
-                        Delete PDF
-                      </Button>
-                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteRecord(record.id)}
+                      disabled={deleteRecordLoading === record.id}
+                      title="Permanently delete this maintenance record including PDF and all related data"
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {deleteRecordLoading === record.id ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Delete Record
+                    </Button>
                   </div>
                 </div>
               </CardContent>

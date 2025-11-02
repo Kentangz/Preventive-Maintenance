@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import AlertDialog from '../ui/AlertDialog'
+import Alert from '../ui/Alert'
 import { Plus, Trash2, Edit, Download, Loader2, Files as FilesIcon } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -212,15 +213,19 @@ const ScheduleManagement = () => {
       />
 
       {message && (
-        <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
+        <Alert
+          variant="success"
+          message={message}
+          onClose={() => setMessage('')}
+        />
       )}
       
       {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-          {error}
-        </div>
+        <Alert
+          variant="error"
+          message={error}
+          onClose={() => setError('')}
+        />
       )}
 
       <div className="flex items-center justify-between">

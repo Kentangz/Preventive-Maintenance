@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
+import Alert from '../ui/Alert'
 import { Trash2, Plus, Save, Eye, Edit, Loader2 } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -274,15 +275,21 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
         </CardHeader>
         <CardContent>
           {message && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md mb-4">
-              {message}
-            </div>
+            <Alert
+              variant="success"
+              message={message}
+              onClose={() => setMessage('')}
+              className="mb-4"
+            />
           )}
           
           {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md mb-4">
-              {error}
-            </div>
+            <Alert
+              variant="error"
+              message={error}
+              onClose={() => setError('')}
+              className="mb-4"
+            />
           )}
 
           {previewMode ? (

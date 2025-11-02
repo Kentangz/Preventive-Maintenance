@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
+import Alert from '../ui/Alert'
 import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import api from '../../utils/api'
 
@@ -193,9 +194,11 @@ const TemplateList = ({ onEdit, onRefresh }) => {
 
       {/* Error Message */}
       {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-          {error}
-        </div>
+        <Alert
+          variant="error"
+          message={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Templates List */}

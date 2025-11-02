@@ -6,6 +6,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import { ThemeToggle } from '../ui/ThemeToggle'
+import Alert from '../ui/Alert'
 import { User, Camera, Loader2, X, RefreshCw } from 'lucide-react'
 
 const EmployeeAuth = () => {
@@ -194,9 +195,11 @@ const EmployeeAuth = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                {error}
-              </div>
+              <Alert
+                variant="error"
+                message={error}
+                onClose={() => setError('')}
+              />
             )}
             
             <div className="space-y-2">
