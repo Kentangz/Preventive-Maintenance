@@ -113,7 +113,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const addInkTonerRibbonItem = (sectionIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items.push({
-      description: 'Ink/Toner/Ribbon Type', // Set default description
+      description: '',
       isInkTonerRibbon: true,
       colors: [],
       merge_columns: false
@@ -221,20 +221,83 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     }))
   }
 
+  const validateForm = () => {
+    for (const [key, value] of Object.entries(formData.device_fields)) {
+      if (value.trim() === '') {
+        const fieldName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        setError(`Device field "${fieldName}" harus diisi.`);
+        return false;
+      }
+    }
+
+    if (formData.items.length === 0) {
+      setError('Minimal harus ada satu "Checklist Item" section.');
+      return false;
+    }
+
+    for (let i = 0; i < formData.items.length; i++) {
+      const section = formData.items[i];
+      if (section.title.trim() === '') {
+        setError(`Judul untuk "Checklist Item" section #${i + 1} harus diisi.`);
+        return false;
+      }
+
+      if (section.items.length === 0) {
+        setError(`Minimal harus ada satu item di dalam section "${section.title || `Section #${i+1}`}".`);
+        return false;
+      }
+
+      for (let j = 0; j < section.items.length; j++) {
+        const subItem = section.items[j];
+        if (subItem.isInkTonerRibbon) {
+          if (subItem.colors.length === 0) {
+            setError(`Minimal harus ada satu warna untuk "Ink/Toner/Ribbon Type" di section "${section.title || `Section #${i+1}`}".`);
+            return false;
+          }
+          for (let k = 0; k < subItem.colors.length; k++) {
+            if (subItem.colors[k].name.trim() === '') {
+              setError(`Nama warna #${k + 1} di "Ink/Toner/Ribbon Type" (section "${section.title || `Section #${i+1}`}") harus diisi.`);
+              return false;
+            }
+          }
+        } else {
+          if (subItem.description.trim() === '') {
+            setError(`Deskripsi untuk item #${j + 1} di section "${section.title || `Section #${i+1}`}" harus diisi.`);
+            return false;
+          }
+        }
+      }
+    }
+
+    if (formData.category === 'printer' && formData.special_fields.stok_tinta) {
+      for (let i = 0; i < formData.special_fields.stok_tinta.length; i++) {
+        if (formData.special_fields.stok_tinta[i].description.trim() === '') {
+          setError(`Deskripsi untuk "Stok Tinta" item #${i + 1} harus diisi.`);
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setMessage('')
     setError('')
+
+    if (!validateForm()) {
+      return; 
+    }
+
+    setLoading(true)
 
     try {
       let response
       if (template && template.id) {
-        // Update existing template
         response = await api.put(`/admin/checklist-templates/${template.id}`, formData)
         setMessage('Template updated successfully')
       } else {
-        // Create new template
         response = await api.post('/admin/checklist-templates', formData)
         setMessage('Template created successfully')
       }
@@ -373,6 +436,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.device}
                     onChange={(e) => handleInputChange('device_fields', 'device', e.target.value)}
                     placeholder="Device name"
+                    required 
                   />
                 </div>
                 <div>
@@ -381,6 +445,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.id_tagging_asset}
                     onChange={(e) => handleInputChange('device_fields', 'id_tagging_asset', e.target.value)}
                     placeholder="ID Tagging"
+                    required
                   />
                 </div>
                 <div>
@@ -389,6 +454,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.opco}
                     onChange={(e) => handleInputChange('device_fields', 'opco', e.target.value)}
                     placeholder="OpCo"
+                    required
                   />
                 </div>
                 <div>
@@ -397,6 +463,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.merk_type}
                     onChange={(e) => handleInputChange('device_fields', 'merk_type', e.target.value)}
                     placeholder="Merk/Type"
+                    required
                   />
                 </div>
                 <div>
@@ -405,6 +472,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.serial_number}
                     onChange={(e) => handleInputChange('device_fields', 'serial_number', e.target.value)}
                     placeholder="Serial Number"
+                    required
                   />
                 </div>
                 <div>
@@ -413,6 +481,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     value={formData.device_fields.location}
                     onChange={(e) => handleInputChange('device_fields', 'location', e.target.value)}
                     placeholder="Location"
+                    required
                   />
                 </div>
               </div>
@@ -432,6 +501,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                 <Card key={sectionIndex}>
                   <CardContent className="p-4">
                     <div className="space-y-4">
+                      {/* Section Title */}
                       <div className="flex items-center justify-between">
                         <Input
                           placeholder="Section title"
@@ -442,6 +512,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                             setFormData(prev => ({ ...prev, items: newItems }))
                           }}
                           className="flex-1 mr-2"
+                          required
                         />
                         <Button
                           type="button"
@@ -483,6 +554,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                             {subItem.isInkTonerRibbon ? (
                               // Special UI for Ink/Toner/Ribbon type
                               <div className="space-y-3">
+                                {/* ... (UI Ink/Toner tidak berubah) ... */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
@@ -498,28 +570,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
-                                
                                 <div className="space-y-2">
-                                  <Input
-                                    placeholder="Item description (e.g., Ink/Toner/Ribbon Type)"
-                                    value={subItem.description || ''}
-                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
-                                    className="w-full"
-                                  />
-                                  
-                                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded border">
-                                    <input
-                                      type="checkbox"
-                                      id={`merge_columns_${sectionIndex}_${itemIndex}`}
-                                      checked={subItem.merge_columns || false}
-                                      onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
-                                      className="h-4 w-4"
-                                    />
-                                    <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-sm">
-                                      Merge columns in PDF for this item
-                                    </label>
-                                  </div>
-                                  
                                   <div className="flex gap-2">
                                     <Button
                                       type="button"
@@ -531,7 +582,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                       Add Color
                                     </Button>
                                   </div>
-                                  
                                   {(subItem.colors || []).map((color, colorIndex) => (
                                     <div key={colorIndex} className="flex gap-2 p-2 bg-blue-50 rounded border border-blue-200">
                                       <Input
@@ -539,6 +589,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                         value={color.name || ''}
                                         onChange={(e) => updateColorInInkTonerRibbon(sectionIndex, itemIndex, colorIndex, 'name', e.target.value)}
                                         className="flex-1"
+                                        required
                                       />
                                       <Button
                                         type="button"
@@ -561,6 +612,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                   value={subItem.description || ''}
                                   onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
                                   className="flex-1"
+                                  required
                                 />
                                 <Button
                                   type="button"
@@ -611,6 +663,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                       value={item.description || ''}
                       onChange={(e) => updateStokTintaItem(idx, e.target.value)}
                       className="flex-1"
+                      required
                     />
                     <Button
                       type="button"
@@ -624,7 +677,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                 ))}
               </div>
             )}
-
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button type="submit" disabled={loading}>
                 {loading ? (
