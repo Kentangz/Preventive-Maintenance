@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown, PcCase, Hash, QrCode, MapPin } from 'lucide-react'
 import api from '../../utils/api'
 
 const TemplateList = ({ onEdit, onRefresh }) => {
@@ -76,7 +76,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
       const response = await api.post(`/admin/checklist-templates/${template.id}/duplicate`)
       
       if (response.data.success) {
-        // Refresh templates list
         await fetchTemplates()
         if (onRefresh) onRefresh()
         setError('')
@@ -89,7 +88,17 @@ const TemplateList = ({ onEdit, onRefresh }) => {
   }
 
   const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const searchLower = searchQuery.toLowerCase()
+    const deviceName = template.device_fields?.device?.toLowerCase() || ''
+    const templateName = template.name.toLowerCase()
+    const assetId = template.device_fields?.id_tagging_asset?.toLowerCase() || ''
+    const serialNumber = template.device_fields?.serial_number?.toLowerCase() || ''
+
+    const matchesSearch = templateName.includes(searchLower) || 
+                          deviceName.includes(searchLower) ||
+                          assetId.includes(searchLower) ||
+                          serialNumber.includes(searchLower)
+    
     const matchesCategory = filterCategory === 'all' || template.category === filterCategory
     return matchesSearch && matchesCategory
   }).sort((a, b) => {
@@ -97,8 +106,8 @@ const TemplateList = ({ onEdit, onRefresh }) => {
     
     switch (sortBy) {
       case 'name':
-        aValue = a.name.toLowerCase()
-        bValue = b.name.toLowerCase()
+        aValue = (a.device_fields?.device || a.name).toLowerCase()
+        bValue = (b.device_fields?.device || b.name).toLowerCase()
         break
       case 'category':
         aValue = a.category.toLowerCase()
@@ -147,7 +156,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
 
   return (
     <div className="space-y-6">
-      {/* Alert Dialog */}
       <AlertDialog
         open={confirmDialog.open}
         onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
@@ -159,7 +167,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         variant={confirmDialog.variant}
       />
 
-      {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-4 flex-col md:flex-row">
@@ -167,7 +174,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cari template..."
+                  placeholder="Cari (Nama Device, Asset ID, Serial...)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -192,7 +199,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         </CardContent>
       </Card>
 
-      {/* Error Message */}
       {error && (
         <Alert
           variant="error"
@@ -201,7 +207,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         />
       )}
 
-      {/* Templates List */}
       {filteredTemplates.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
@@ -211,7 +216,6 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {/* Sort Header */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -258,76 +262,109 @@ const TemplateList = ({ onEdit, onRefresh }) => {
           </Card>
           
           <div className="grid gap-4">
-            {filteredTemplates.map((template) => (
-            <Card key={template.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold">{template.name}</h3>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        template.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {template.is_active ? 'Aktif' : 'Nonaktif'}
-                      </span>
-                      <span className="px-2 py-1 text-xs rounded bg-primary/10 text-primary capitalize">
-                        {template.category}
-                      </span>
+            {filteredTemplates.map((template) => {
+              
+              const deviceFields = template.device_fields || {}
+              const title = deviceFields.device || template.name
+
+              const descriptionFields = [
+                { icon: QrCode, label: 'Asset ID', value: deviceFields.id_tagging_asset },
+                { icon: PcCase, label: 'Merk/Type', value: deviceFields.merk_type },
+                { icon: Hash, label: 'Serial', value: deviceFields.serial_number },
+                { icon: MapPin, label: 'Lokasi', value: deviceFields.location },
+              ].filter(field => field.value)
+
+              return (
+                <Card key={template.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0"> 
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="text-lg font-semibold truncate" title={title}>
+                            {title}
+                          </h3>
+
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            template.is_active 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {template.is_active ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                          <span className="px-2 py-1 text-xs rounded bg-primary/10 text-primary capitalize">
+                            {template.category}
+                          </span>
+                        </div>
+                        
+                        {/* Tampilkan detail device fields */}
+                        {descriptionFields.length > 0 ? (
+                          <div className="text-sm text-muted-foreground mb-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                            {descriptionFields.map(field => (
+                              <div key={field.label} className="flex items-center gap-2 truncate" title={field.value}>
+                                <field.icon className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate">
+                                  <strong>{field.label}:</strong> {field.value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground mb-3 italic">
+                            (No device details)
+                          </p>
+                        )}
+
+                        <div className="text-xs text-muted-foreground">
+                          Dibuat: {new Date(template.created_at).toLocaleDateString('id-ID')} | {template.items?.length || 0} section checklist
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(template)}
+                        >
+                          <Edit className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDuplicate(template)}
+                          disabled={duplicatingId === template.id}
+                        >
+                          {duplicatingId === template.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Duplicate</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(template.id)}
+                          disabled={deletingId === template.id}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {deletingId === template.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Delete</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {template.items?.length || 0} section checklist
-                    </p>
-                    <div className="text-xs text-muted-foreground">
-                      Dibuat: {new Date(template.created_at).toLocaleDateString('id-ID')}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEdit(template)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDuplicate(template)}
-                      disabled={duplicatingId === template.id}
-                    >
-                      {duplicatingId === template.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(template.id)}
-                      disabled={deletingId === template.id}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      {deletingId === template.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </div>
       )}

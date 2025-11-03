@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class ScheduleController extends Controller
 {
@@ -16,7 +17,7 @@ class ScheduleController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $schedules = Schedule::orderBy('created_at', 'desc')->get();
+        $schedules = Schedule::with('user')->latest()->get();
 
         return response()->json([
             'success' => true,
@@ -52,7 +53,7 @@ class ScheduleController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'document' => 'nullable|file|max:10240', // Max 10MB, format bebas
+            'document' => 'nullable|file', 
         ]);
 
         if ($validator->fails()) {
@@ -68,6 +69,9 @@ class ScheduleController extends Controller
         $documentName = null;
         $documentType = null;
         $documentSize = null;
+
+        $data = $request->only(['title','description']);
+        $data['user_id'] = Auth::id();
 
         if ($request->hasFile('document')) {
             $file = $request->file('document');
@@ -85,6 +89,7 @@ class ScheduleController extends Controller
             'document_name' => $documentName,
             'document_type' => $documentType,
             'document_size' => $documentSize,
+            'user_id' => $data['user_id'],
         ]);
 
         return response()->json([
@@ -111,7 +116,7 @@ class ScheduleController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'document' => 'nullable|file|max:10240', // Max 10MB, format bebas
+            'document' => 'nullable|file',
         ]);
 
         if ($validator->fails()) {

@@ -614,7 +614,7 @@ class ChecklistController extends Controller
             'checklist_template_id' => 'required|exists:checklist_templates,id',
             'notes' => 'required|string',
             'device_photos' => 'required|array|min:1|max:2',
-            'device_photos.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'device_photos.*' => 'required|image|mimes:jpeg,png,jpg,gif',
         ]);
 
         if ($validator->fails()) {

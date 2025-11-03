@@ -13,5 +13,11 @@ class Schedule extends Model
         'document_name',
         'document_type',
         'document_size',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

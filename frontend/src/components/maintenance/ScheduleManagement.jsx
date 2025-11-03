@@ -5,7 +5,7 @@ import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Plus, Trash2, Edit, Download, Loader2, Files as FilesIcon } from 'lucide-react'
+import { Plus, Trash2, Edit, Download, Loader2, Files as FilesIcon, Search, User as UserIcon } from 'lucide-react' 
 import api from '../../utils/api'
 
 const ScheduleManagement = () => {
@@ -27,6 +27,9 @@ const ScheduleManagement = () => {
     onConfirm: null,
     variant: 'default'
   })
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortOrder, setSortOrder] = useState('tanggal-desc') 
 
   useEffect(() => {
     fetchSchedules()
@@ -77,18 +80,17 @@ const ScheduleManagement = () => {
       if (formData.document) {
         submitData.append('document', formData.document)
       }
-
+      
       let response
       if (editingSchedule) {
-        // Update
-        response = await api.put(`/admin/schedules/${editingSchedule.id}`, submitData, {
+        submitData.append('_method', 'PUT')
+        response = await api.post(`/admin/schedules/${editingSchedule.id}`, submitData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         })
         setMessage('Schedule updated successfully')
       } else {
-        // Create
         response = await api.post('/admin/schedules', submitData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -151,7 +153,6 @@ const ScheduleManagement = () => {
       const link = document.createElement('a')
       link.href = url
       
-      // Get filename from Content-Disposition header or use schedule name
       const contentDisposition = response.headers['content-disposition']
       let filename = 'document'
       if (contentDisposition) {
@@ -198,9 +199,26 @@ const ScheduleManagement = () => {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
   }
 
+  const filteredAndSortedSchedules = schedules
+    .filter(schedule => 
+      schedule.title.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'nama-asc':
+          return a.title.localeCompare(b.title)
+        case 'nama-desc':
+          return b.title.localeCompare(a.title)
+        case 'tanggal-asc':
+          return new Date(a.created_at) - new Date(b.created_at)
+        case 'tanggal-desc':
+        default:
+          return new Date(b.created_at) - new Date(a.created_at)
+      }
+    })
+
   return (
     <div className="space-y-6">
-      {/* Alert Dialog */}
       <AlertDialog
         open={confirmDialog.open}
         onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
@@ -285,7 +303,7 @@ const ScheduleManagement = () => {
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Upload dokumen dalam format apapun (PDF, Word, Excel, dll). Maksimal 10MB.
+                  Upload dokumen dalam format apapun (PDF, Word, Excel, dll)
                 </p>
                 {editingSchedule && editingSchedule.document_name && (
                   <p className="text-xs text-blue-600 mt-1">
@@ -320,6 +338,39 @@ const ScheduleManagement = () => {
         </Card>
       ) : (
         <div className="space-y-4">
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Label htmlFor="search" className="sr-only">Cari Dokumen</Label>
+              <Input
+                id="search"
+                type="text"
+                placeholder="Cari berdasarkan judul dokumen..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Search className="h-4 w-4" />
+              </span>
+            </div>
+            
+            <div className="flex-none">
+              <Label htmlFor="sort" className="sr-only">Urutkan</Label>
+              <select
+                id="sort"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="w-full sm:w-auto h-10 px-3 py-2 border rounded-md text-sm bg-background text-foreground"
+              >
+                <option value="tanggal-desc">Tanggal (Terbaru)</option>
+                <option value="tanggal-asc">Tanggal (Terlama)</option>
+                <option value="nama-asc">Nama (A-Z)</option>
+                <option value="nama-desc">Nama (Z-A)</option>
+              </select>
+            </div>
+          </div>
+
           {loading && schedules.length === 0 ? (
             <Card>
               <CardContent className="p-6">
@@ -338,8 +389,17 @@ const ScheduleManagement = () => {
                 </div>
               </CardContent>
             </Card>
+          ) : filteredAndSortedSchedules.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center text-muted-foreground">
+                  <FilesIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Tidak ada dokumen yang cocok dengan pencarian Anda.</p>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
-            schedules.map((schedule) => (
+            filteredAndSortedSchedules.map((schedule) => (
               <Card key={schedule.id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -348,7 +408,14 @@ const ScheduleManagement = () => {
                       {schedule.description && (
                         <p className="text-sm text-muted-foreground mt-1">{schedule.description}</p>
                       )}
-                      <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-muted-foreground">
+                        {schedule.user && (
+                          <div className="flex items-center gap-2">
+                            <UserIcon className="h-4 w-4" />
+                            <span>Di-upload oleh: {schedule.user.name}</span>
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-2">
                           <FilesIcon className="h-4 w-4" />
                           <span>Dibuat: {formatDate(schedule.created_at)}</span>
