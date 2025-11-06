@@ -421,8 +421,7 @@
         </tr>
         @foreach($section['items'] as $itemIndex => $item)
         @php
-        $templateItemData = $templateItemsArray[$itemIndex] ?? null;
-        $mergeColumns = $templateItemData && isset($templateItemData['merge_columns']) ? $templateItemData['merge_columns'] : false;
+        $mergeColumns = isset($item['merge_columns']) && $item['merge_columns'] === true;
         @endphp
         @if(isset($item['isInkTonerRibbon']) && $item['isInkTonerRibbon'])
         @foreach($item['colors'] as $index => $color)
