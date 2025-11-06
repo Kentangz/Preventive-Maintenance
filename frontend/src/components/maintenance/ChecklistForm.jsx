@@ -7,6 +7,9 @@ import Alert from '../ui/Alert'
 import { CheckCircle, XCircle, Camera, Loader2, Upload } from 'lucide-react'
 import api from '../../utils/api'
 
+const DEFAULT_NOTES_TEMPLATE = 
+`Host Name : \nIP address : \nMac Address : `;
+
 const ChecklistForm = ({ template, onSuccess }) => {
   const [deviceData, setDeviceData] = useState({
     device: '',
@@ -19,11 +22,11 @@ const ChecklistForm = ({ template, onSuccess }) => {
   
   const [checklistResponses, setChecklistResponses] = useState([])
   const [stokTintaResponses, setStokTintaResponses] = useState([])
-  const [notes, setNotes] = useState('')
-  const [photos, setPhotos] = useState([]) // Changed to array for multiple photos
-  const [previews, setPreviews] = useState([]) // Changed to array for multiple previews
-  const [stream, setStream] = useState(null) // For camera stream
-  const [showCamera, setShowCamera] = useState(false) // For camera UI
+  const [notes, setNotes] = useState('') 
+  const [photos, setPhotos] = useState([])
+  const [previews, setPreviews] = useState([])
+  const [stream, setStream] = useState(null)
+  const [showCamera, setShowCamera] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -60,15 +63,14 @@ const ChecklistForm = ({ template, onSuccess }) => {
                 }))
               }
             } else {
-              // Regular item - check if merge_columns is enabled
-              // Ensure we check merge_columns properly (could be boolean or undefined)
+
               const hasMergeColumns = subItem.merge_columns === true || subItem.merge_columns === 'true' || subItem.merge_columns === 1
               
               if (hasMergeColumns) {
                 return {
                   description: subItem.description,
-                  merged_text: '', // Single input for merged columns
-                  merge_columns: true // Store merge_columns flag for rendering check
+                  merged_text: '',
+                  merge_columns: true
                 }
               } else {
                 return {
@@ -76,7 +78,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                   normal: false,
                   error: false,
                   information: '',
-                  merge_columns: false // Store merge_columns flag for rendering check
+                  merge_columns: false
                 }
               }
             }
@@ -90,6 +92,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
         const stokTintaResponses = template.special_fields.stok_tinta.map(() => '')
         setStokTintaResponses(stokTintaResponses)
       }
+      setNotes(DEFAULT_NOTES_TEMPLATE)
     }
   }, [template])
 
@@ -102,17 +105,32 @@ const ChecklistForm = ({ template, onSuccess }) => {
   }
 
   const handleInkTonerRibbonChange = (sectionIndex, itemIndex, colorIndex, field, value) => {
+    let processedValue = value;
+
+    if (field === 'percentage') {
+      let numericValue = value.replace(/[^0-9]/g, '');
+      
+      if (numericValue !== '') {
+        let num = parseInt(numericValue, 10);
+        if (num > 100) numericValue = '100';
+        else if (num < 0) numericValue = '0';
+        else numericValue = num.toString();
+      }
+      processedValue = numericValue;
+    }
+
     setChecklistResponses(prev => {
-      const newResponses = [...prev]
-      newResponses[sectionIndex].items[itemIndex].colors[colorIndex][field] = value
-      return newResponses
-    })
+      const newResponses = [...prev];
+      newResponses[sectionIndex].items[itemIndex].colors[colorIndex][field] = processedValue;
+      return newResponses;
+    });
   }
 
   const handleStokTintaChange = (index, value) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
     setStokTintaResponses(prev => {
       const newResponses = [...prev]
-      newResponses[index] = value
+      newResponses[index] = numericValue
       return newResponses
     })
   }
@@ -201,62 +219,107 @@ const ChecklistForm = ({ template, onSuccess }) => {
     }
   }, [previews])
 
+  // Helper function to scroll to errors
+  const scrollToError = (elementId, message) => {
+    setError(message);
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      const input = element.querySelector('input, textarea');
+      if (input) {
+        input.focus({ preventScroll: true });
+      }
+    }
+  };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    // Validation
+    setError('')
+
     if (photos.length === 0) {
-      setError('Minimal 1 foto perangkat wajib diisi')
+      scrollToError('photo-section', 'Minimal 1 foto perangkat wajib diisi');
       return
     }
-    
     if (photos.length > 2) {
-      setError('Maksimal 2 foto perangkat')
+      scrollToError('photo-section', 'Maksimal 2 foto perangkat');
       return
     }
 
-    // Check if error items have information filled (for non-merged columns)
-    // Check if merged_text items are filled
-    for (const section of checklistResponses) {
-      for (const item of section.items) {
-        if (!item.isInkTonerRibbon) {
-          if (item.merged_text !== undefined) {
-            // Merged columns item
-            if (!item.merged_text || item.merged_text.trim() === '') {
-              setError('Field Condition & Information wajib diisi untuk item dengan merge columns')
+    for (const [sectionIndex, section] of checklistResponses.entries()) {
+      for (const [itemIndex, item] of section.items.entries()) {
+        const elementId = `checklist-item-${sectionIndex}-${itemIndex}`;
+        
+        if (item.isInkTonerRibbon) {
+          // Validasi Ink/Toner
+          for (const color of item.colors) {
+            if (!color.percentage || color.percentage.trim() === '') {
+              scrollToError(elementId, `Persentase untuk "${color.name}" wajib diisi.`);
               return
             }
-          } else {
-            // Normal columns item
-            if (item.error && !item.information) {
-              setError('Field information wajib diisi untuk item yang error')
-              return
-            }
+          }
+        } else if (item.merged_text !== undefined) {
+          // Validasi Merged columns
+          if (!item.merged_text || item.merged_text.trim() === '') {
+            scrollToError(elementId, `Field Condition & Information wajib diisi untuk item: "${item.description}"`);
+            return
+          }
+        } else {
+          // Validasi Normal columns
+          if (!item.normal && !item.error) {
+            scrollToError(elementId, `Pilih "Normal" atau "Error" untuk item: "${item.description}"`);
+            return
+          }
+          if (item.error && (!item.information || item.information.trim() === '')) {
+            scrollToError(elementId, `Field information wajib diisi untuk item "${item.description}" yang error`);
+            return
           }
         }
       }
     }
 
-    // Check if stok tinta is filled
     if (template.category === 'printer' && template.special_fields?.stok_tinta && template.special_fields.stok_tinta.length > 0) {
       for (let i = 0; i < template.special_fields.stok_tinta.length; i++) {
         if (!stokTintaResponses[i] || stokTintaResponses[i] === '') {
-          setError('Jumlah pcs stok tinta wajib diisi')
+          const elementId = `stok-tinta-item-${i}`;
+          scrollToError(elementId, 'Jumlah pcs stok tinta wajib diisi');
           return
         }
       }
     }
 
+    if (!notes || notes.trim() === '') {
+      scrollToError('notes-section', 'Catatan wajib diisi');
+      return
+    }
+
+
     setLoading(true)
-    setError('')
     setMessage('')
 
     try {
-      // Stok tinta is handled separately in PDF template, no need to add to checklist_responses
+      const responsesToSend = JSON.parse(JSON.stringify(checklistResponses));
+      
+      for (const section of responsesToSend) {
+        for (const item of section.items) {
+          if (item.isInkTonerRibbon) {
+            for (const color of item.colors) {
+              if (color.percentage) {
+                color.percentage = `${color.percentage}%`;
+              }
+            }
+          }
+        }
+      }
+
       const formData = new FormData()
       formData.append('checklist_template_id', template.id)
       formData.append('device_data', JSON.stringify(deviceData))
-      formData.append('checklist_responses', JSON.stringify(checklistResponses))
+      formData.append('checklist_responses', JSON.stringify(responsesToSend)) 
       formData.append('stok_tinta_responses', JSON.stringify(stokTintaResponses))
       formData.append('notes', notes)
       
@@ -286,15 +349,13 @@ const ChecklistForm = ({ template, onSuccess }) => {
         })
         setChecklistResponses([])
         setStokTintaResponses([])
-        setNotes('')
+        setNotes(DEFAULT_NOTES_TEMPLATE)
         // Cleanup preview URLs
         previews.forEach(url => URL.revokeObjectURL(url))
         setPhotos([])
         setPreviews([])
         stopCamera()
         
-        // Call onSuccess callback to return to template selector after 1 second
-        // Pass success message to parent
         setTimeout(() => {
           if (onSuccess) {
             onSuccess(successMsg)
@@ -320,7 +381,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {message && (
         <Alert
           variant="success"
@@ -406,7 +467,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
           <CardContent>
             <div className="space-y-4">
               {item.items && item.items.map((subItem, itemIndex) => (
-                <div key={itemIndex} className="space-y-2 p-3 border rounded">
+                <div key={itemIndex} id={`checklist-item-${sectionIndex}-${itemIndex}`} className="space-y-2 p-3 border rounded">
                   {subItem.isInkTonerRibbon ? (
                     // Special UI for Ink/Toner/Ribbon type
                     <div className="space-y-3">
@@ -423,35 +484,30 @@ const ChecklistForm = ({ template, onSuccess }) => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Input
-                                placeholder="Masukkan persentase (e.g., 85%)"
+                                type="tel" 
+                                inputMode="numeric"
                                 value={color.percentage || ''}
                                 onChange={(e) => handleInkTonerRibbonChange(sectionIndex, itemIndex, colorIndex, 'percentage', e.target.value)}
-                                className="w-32"
-                                required
+                                className="w-10 text-right"
+                                maxLength="3"
                               />
+                              <span className="text-sm font-medium">%</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   ) : (
-                    // Regular item UI - check if merge_columns is enabled
-                    // Use responseItem as primary source of truth (stored during initialization)
                     (() => {
-                      // Get response item (stored during initialization)
                       const responseItem = checklistResponses[sectionIndex]?.items[itemIndex]
                       
-                      // Check from response first (most reliable)
                       if (responseItem) {
-                        // If response has merge_columns flag, use it
                         if (responseItem.merge_columns === true) {
                           return true
                         }
-                        // If response has merged_text, it means merge_columns was enabled
                         if (responseItem.merged_text !== undefined) {
                           return true
                         }
-                        // If response has normal/error/information, it means merge_columns was false
                         if (responseItem.normal !== undefined || responseItem.error !== undefined || responseItem.information !== undefined) {
                           return false
                         }
@@ -467,25 +523,25 @@ const ChecklistForm = ({ template, onSuccess }) => {
                           <p className="font-medium mb-2">{subItem.description}</p>
                           <Label>Condition & Information</Label>
                           <Input
-                            placeholder="Masukkan kondisi dan informasi (contoh: Normal | Error: V | Info: Terjadi kerusakan pada bagian X)"
+                            placeholder="Masukkan informasi..."
                             value={checklistResponses[sectionIndex]?.items[itemIndex]?.merged_text || ''}
                             onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'merged_text', e.target.value)}
-                            required
                             className="w-full"
                           />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Masukkan kondisi dan informasi dalam satu field (misal: Normal: V | Error: V | Info: deskripsi)
-                          </p>
                         </div>
                       </div>
                     ) : (
                       // Normal columns: separate checkboxes and input
-                      <>
-                        <div className="flex items-center gap-4">
-                          <div className="flex-1">
+                      <div className="space-y-2">
+                        {/* Flex container for description and buttons */}
+                        <div className="flex flex-col md:flex-row md:items-center md:gap-4">
+                          {/* Description (takes up available space) */}
+                          <div className="flex-1 mb-2 md:mb-0">
                             <p className="font-medium">{subItem.description}</p>
                           </div>
-                          <div className="flex items-center gap-4">
+                          
+                          {/* Checkboxes (fixed width, won't shrink) */}
+                          <div className="flex flex-shrink-0 items-center gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
@@ -494,7 +550,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                                   if (e.target.checked) {
                                     handleChecklistChange(sectionIndex, itemIndex, 'normal', true)
                                     handleChecklistChange(sectionIndex, itemIndex, 'error', false)
-                                    handleChecklistChange(sectionIndex, itemIndex, 'information', '')
+                                    // handleChecklistChange(sectionIndex, itemIndex, 'information', '') 
                                   } else {
                                     handleChecklistChange(sectionIndex, itemIndex, 'normal', false)
                                   }
@@ -522,17 +578,16 @@ const ChecklistForm = ({ template, onSuccess }) => {
                             </label>
                           </div>
                         </div>
-                        {checklistResponses[sectionIndex]?.items[itemIndex]?.error && (
-                          <div>
-                            <Input
-                              placeholder="Masukkan informasi error..."
-                              value={checklistResponses[sectionIndex]?.items[itemIndex]?.information || ''}
-                              onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'information', e.target.value)}
-                              required
-                            />
-                          </div>
-                        )}
-                      </>
+                        
+                        {/* Information Input (always full width on its own line) */}
+                        <div>
+                          <Input
+                            placeholder="Masukkan informasi (wajib jika error)..."
+                            value={checklistResponses[sectionIndex]?.items[itemIndex]?.information || ''}
+                            onChange={(e) => handleChecklistChange(sectionIndex, itemIndex, 'information', e.target.value)}
+                          />
+                        </div>
+                      </div>
                     )
                   )}
                 </div>
@@ -552,19 +607,17 @@ const ChecklistForm = ({ template, onSuccess }) => {
           <CardContent>
             <div className="space-y-4">
               {template.special_fields.stok_tinta.map((item, index) => (
-                <div key={index} className="flex items-center gap-4 p-3 border rounded">
+                <div key={index} id={`stok-tinta-item-${index}`} className="flex items-center gap-4 p-3 border rounded">
                   <div className="flex-1">
                     <p className="font-medium">{item.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Input
-                      type="number"
-                      min="0"
-                      placeholder="Jumlah pcs"
+                      type="text"
+                      inputMode="numeric"
                       value={stokTintaResponses[index] || ''}
                       onChange={(e) => handleStokTintaChange(index, e.target.value)}
-                      className="w-24"
-                      required
+                      className="w-10"
                     />
                     <span className="text-sm text-muted-foreground">pcs</span>
                   </div>
@@ -576,7 +629,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
       )}
 
       {/* Notes */}
-      <Card>
+      <Card id="notes-section">
         <CardHeader>
           <CardTitle>Catatan</CardTitle>
           <CardDescription>Tambahkan catatan penting tentang maintenance ini</CardDescription>
@@ -587,13 +640,12 @@ const ChecklistForm = ({ template, onSuccess }) => {
             onChange={(e) => setNotes(e.target.value)}
             className="w-full min-h-[100px] px-3 py-2 border rounded-md"
             placeholder="Masukkan catatan..."
-            required
           />
         </CardContent>
       </Card>
 
       {/* Photo Upload */}
-      <Card>
+      <Card id="photo-section">
         <CardHeader>
           <CardTitle>Foto Perangkat</CardTitle>
           <CardDescription>Ambil foto perangkat setelah maintenance (Maksimal 2 foto)</CardDescription>

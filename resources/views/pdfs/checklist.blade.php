@@ -154,7 +154,7 @@
       width: 100%;
       border-collapse: collapse;
       margin: 15px 0;
-      font-size: 11px;
+      font-size: 10px;
     }
 
     table.checklist,
@@ -165,25 +165,25 @@
 
     table.checklist th {
       background: #d3d3d3;
-      padding: 4px;
+      padding: 3px 2px;
       text-align: center;
       font-weight: bold;
-      font-size: 11px;
+      font-size: 10px;
     }
 
     table.checklist td {
-      padding: 4px 6px;
+      padding: 2px 4px;
       vertical-align: top;
     }
 
     .no-col {
-      width: 40px;
+      width: 30px;
       text-align: center;
       border: none !important;
     }
 
     .desc-col {
-      padding-left: 8px;
+      padding-left: 6px;
     }
 
     .condition-header {
@@ -192,32 +192,32 @@
     }
 
     .check-col {
-      width: 50px;
+      width: 40px;
       text-align: center;
       vertical-align: middle;
     }
 
     .info-col {
-      width: 180px;
+      width: 150px;
     }
 
     .merged-col {
-      width: 250px;
+      width: 220px;
     }
 
     .check-item {
       font-style: italic;
-      padding: 1px 4px;
-      font-size: 12px;
+      padding: 1px 3px;
+      font-size: 10px;
       background: #f5f5f5;
     }
 
     tbody tr {
-      height: 18px;
+      height: 14px;
     }
 
     .title-row td {
-      padding: 4px 8px;
+      padding: 3px 6px;
       border: none !important;
     }
 
@@ -433,11 +433,11 @@
             @endif
           </td>
           @if($mergeColumns)
-          <td style="text-align: left; vertical-align: middle; padding-left: 10px;">
+          <td style="text-align: left; vertical-align: middle; padding-left: 8px;">
             {{ $color['name'] ?? '' }} - {{ $color['percentage'] ?? '...%' }}
           </td>
           @else
-          <td colspan="2" style="text-align: left; vertical-align: middle; padding-left: 10px;">
+          <td colspan="2" style="text-align: left; vertical-align: middle; padding-left: 8px;">
             {{ $color['name'] ?? '' }}
           </td>
           <td style="text-align: center">{{ $color['percentage'] ?? '...%' }}</td>
@@ -451,7 +451,7 @@
             {{ $item['description'] }}
           </td>
           @if($mergeColumns)
-          <td colspan="3" style="padding: 4px 6px; vertical-align: top; border-left: 1px solid black; border-right: 1px solid black;">
+          <td colspan="3" style="padding: 2px 4px; vertical-align: top; border-left: 1px solid black; border-right: 1px solid black;">
             @if(isset($item['merged_text']) && !empty($item['merged_text']))
             {{ $item['merged_text'] }}
             @else
@@ -478,7 +478,7 @@
         </tr>
         @endif
         @endforeach
-        <tr class="spacer-row" style="height: 20px">
+        <tr class="spacer-row" style="height: 12px">
           <td colspan="5"></td>
         </tr>
         @endforeach
@@ -500,7 +500,7 @@
           </td>
         </tr>
         @endforeach
-        <tr class="spacer-row" style="height: 20px">
+        <tr class="spacer-row" style="height: 12px">
           <td colspan="5"></td>
         </tr>
         @endif
@@ -512,13 +512,12 @@
         </tr>
         <tr>
           <td class="no-col"></td>
-          <td colspan="4" style="padding: 15px; vertical-align: top">
-            <div style="font-size: 11px; line-height: 1.6; min-height: 60px">
-              {{ $record->notes }}
+          <td colspan="4" style="padding: 5px; vertical-align: top">
+            <div style="font-size: 10px; line-height: 1.5; min-height: 50px; white-space: pre-wrap;">{{ $record->notes }}
             </div>
           </td>
         </tr>
-        <tr class="spacer-row" style="height: 20px">
+        <tr class="spacer-row" style="height: 12px">
           <td colspan="5"></td>
         </tr>
       </tbody>
