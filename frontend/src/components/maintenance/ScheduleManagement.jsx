@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -6,11 +6,21 @@ import { Label } from '../ui/Label'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
 import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Plus, Trash2, Edit, Download, Files as FilesIcon, Search, User as UserIcon } from 'lucide-react' 
-import api from '../../utils/api'
+import { scheduleService } from '../../services/scheduleService'
+import { useSchedules } from '../../hooks/useSchedules'
 
 const ScheduleManagement = () => {
-  const [schedules, setSchedules] = useState([])
+  const {
+    schedules,
+    loading: fetching,
+    error: fetchError,
+    setError: setFetchError,
+    saveSchedule,
+    deleteSchedule,
+  } = useSchedules()
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -31,24 +41,7 @@ const ScheduleManagement = () => {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState('tanggal-desc') 
-
-  useEffect(() => {
-    fetchSchedules()
-  }, [])
-
-  const fetchSchedules = async () => {
-    setLoading(true)
-    try {
-      const response = await api.get('/admin/schedules')
-      if (response.data.success) {
-        setSchedules(response.data.data)
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch schedules')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const displayError = useMemo(() => error || fetchError, [error, fetchError])
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -82,27 +75,17 @@ const ScheduleManagement = () => {
         submitData.append('document', formData.document)
       }
       
-      let response
-      if (editingSchedule) {
-        submitData.append('_method', 'PUT')
-        response = await api.post(`/admin/schedules/${editingSchedule.id}`, submitData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        })
-        setMessage('Schedule updated successfully')
-      } else {
-        response = await api.post('/admin/schedules', submitData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        })
-        setMessage('Schedule created successfully')
-      }
+      const result = await saveSchedule(submitData, editingSchedule?.id)
 
-      if (response.data.success) {
-        fetchSchedules()
+      if (result.success) {
+        setMessage(
+          result.message || (editingSchedule ? 'Schedule updated successfully' : 'Schedule created successfully')
+        )
+        setError('')
+        setFetchError('')
         resetForm()
+      } else {
+        setError(result.message || 'Failed to save schedule')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save schedule')
@@ -129,10 +112,13 @@ const ScheduleManagement = () => {
       onConfirm: async () => {
         setLoading(true)
         try {
-          const response = await api.delete(`/admin/schedules/${id}`)
-          if (response.data.success) {
-            setMessage('Dokumen berhasil dihapus')
-            fetchSchedules()
+          const result = await deleteSchedule(id)
+          if (result.success) {
+            setMessage(result.message || 'Dokumen berhasil dihapus')
+            setError('')
+            setFetchError('')
+          } else {
+            setError(result.message || 'Gagal menghapus dokumen')
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Gagal menghapus dokumen')
@@ -146,9 +132,7 @@ const ScheduleManagement = () => {
 
   const handleDownload = async (id) => {
     try {
-      const response = await api.get(`/admin/schedules/${id}/download`, {
-        responseType: 'blob'
-      })
+      const response = await scheduleService.download(id)
       
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
@@ -239,11 +223,14 @@ const ScheduleManagement = () => {
         />
       )}
       
-      {error && (
+      {displayError && (
         <Alert
           variant="error"
-          message={error}
-          onClose={() => setError('')}
+          message={displayError}
+          onClose={() => {
+            setError('')
+            setFetchError('')
+          }}
         />
       )}
 
@@ -322,10 +309,7 @@ const ScheduleManagement = () => {
               <div className="flex gap-2">
                 <Button type="submit" disabled={loading}>
                   {loading ? (
-                    <div className="flex w-full items-center justify-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded-full" />
-                      <Skeleton className="h-4 w-24 rounded-md" />
-                    </div>
+                    <ButtonLoader labelClassName="w-24" />
                   ) : (
                     editingSchedule ? 'Update Dokumen' : 'Simpan Dokumen'
                   )}
@@ -372,7 +356,7 @@ const ScheduleManagement = () => {
             </div>
           </div>
 
-          {loading && schedules.length === 0 ? (
+          {fetching && schedules.length === 0 ? (
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-3">

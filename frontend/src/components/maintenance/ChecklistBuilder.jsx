@@ -4,10 +4,10 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Trash2, Plus, Save, Eye, Edit, ChevronDown, ChevronUp } from 'lucide-react'
 import { AlertDialog } from '../ui/AlertDialog' 
-import api from '../../utils/api'
+import { templateService } from '../../services/templateService'
 
 const ChecklistBuilder = ({ category, template, onSave }) => {
   const [formData, setFormData] = useState({
@@ -251,9 +251,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     }
 
     try {
-      const response = await api.post('/admin/checklist-templates/preview-pdf', formData, {
-        responseType: 'blob',
-      });
+      const response = await templateService.previewTemplatePdf(formData)
 
       const file = new Blob([response.data], { type: 'application/pdf' });
       const fileURL = URL.createObjectURL(file);
@@ -261,7 +259,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       setTimeout(() => URL.revokeObjectURL(fileURL), 10000);
 
     } catch (err) {
-      err
+      setError(err?.response?.data?.message || 'Gagal membuat preview PDF')
     } finally {
       setPreviewLoading(false);
     }
@@ -351,15 +349,15 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       let response
       let successMessage
       if (template && template.id) {
-        response = await api.put(`/admin/checklist-templates/${template.id}`, formData)
+        response = await templateService.updateTemplate(template.id, formData)
         successMessage = 'Template berhasil diperbarui'
       } else {
-        response = await api.post('/admin/checklist-templates', formData)
+        response = await templateService.createTemplate(formData)
         successMessage = 'Template berhasil disimpan'
       }
       setMessage(successMessage)
       
-      if (response.data.success) {
+      if (response.success) {
         if (onSave) {
           onSave({ type: template && template.id ? 'update' : 'create', message: successMessage })
         }
@@ -389,12 +387,9 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                 onClick={handlePreviewPDF}
                 disabled={previewLoading || loading}
               >
-                {previewLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 rounded-full" />
-                    <Skeleton className="h-4 w-20 rounded-md" />
-                  </div>
-                ) : (
+              {previewLoading ? (
+                <ButtonLoader labelClassName="w-20" className="w-auto" />
+              ) : (
                   <Eye className="h-4 w-4 mr-2" />
                 )}
                 Preview PDF
@@ -709,10 +704,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button type="submit" disabled={loading || previewLoading}>
                 {loading ? (
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 rounded-full" />
-                    <Skeleton className="h-4 w-24 rounded-md" />
-                  </div>
+                <ButtonLoader labelClassName="w-24" className="w-auto" />
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />

@@ -1,35 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Input } from '../ui/Input'
 import { Skeleton } from '../ui/Skeleton'
 import { FileText, Search } from 'lucide-react'
-import api from '../../utils/api'
+import { useEmployeeTemplates } from '../../hooks/useEmployeeTemplates'
 
 const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
-  const [templates, setTemplates] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { templates, loading, error } = useEmployeeTemplates(category)
   const [selectedTemplate, setSelectedTemplate] = useState(null)  
   const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchTemplates = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await api.get(`/employee/checklist-templates/${category}`)
-      
-      if (response.data.success) {
-        setTemplates(response.data.data)
-      }
-    } catch  {
-      setError('Gagal memuat templates')
-    } finally {
-      setLoading(false)
-    }
-  }, [category])
-
   useEffect(() => {
-    fetchTemplates()
-  }, [fetchTemplates])
+    setSelectedTemplate(null)
+  }, [category])
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template)

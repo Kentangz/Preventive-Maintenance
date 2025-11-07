@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import MaintenanceRecordsList from './MaintenanceRecordsList'
 import AcceptManagement from './AcceptManagement'
-import api from '../../utils/api'
+import { maintenanceService } from '../../services/maintenanceService'
 
 const CategoryManagement = ({ category }) => {
   const [activeTab, setActiveTab] = useState('records') // 'records' or 'accept'
@@ -11,9 +11,11 @@ const CategoryManagement = ({ category }) => {
 
   const fetchPendingCount = useCallback(async () => {
     try {
-      const response = await api.get(`/admin/maintenance-records/pending/${category}`)
-      if (response.data.success) {
-        setPendingCount(response.data.data?.length || 0)
+      const response = await maintenanceService.fetchPendingRecords(category)
+      if (response.success) {
+        setPendingCount(response.data?.length || 0)
+      } else {
+        setPendingCount(0)
       }
     } catch {
       setPendingCount(0)

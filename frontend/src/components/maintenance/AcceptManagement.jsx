@@ -1,19 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
 import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Search, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } from 'lucide-react'
-import api from '../../utils/api'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
+import { useMaintenanceApprovals } from '../../hooks/useMaintenanceApprovals'
+import { maintenanceService } from '../../services/maintenanceService'
 
 const AcceptManagement = ({ category, onPendingCountChange }) => {
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'rejected'
-  const [pendingRecords, setPendingRecords] = useState([])
-  const [rejectedRecords, setRejectedRecords] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -29,73 +28,28 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
   })
   const { user } = useAuth()
 
-  const fetchPendingRecords = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await api.get(`/admin/maintenance-records/pending/${category}`)
-      if (response.data.success) {
-        setPendingRecords(response.data.data)
-        // Notify parent about pending count change
-        if (onPendingCountChange) {
-          onPendingCountChange(response.data.data?.length || 0)
-        }
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Gagal memuat pending records')
-      if (onPendingCountChange) {
-        onPendingCountChange(0)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [category, onPendingCountChange])
-
-  const fetchRejectedRecords = useCallback(async () => {
-    try {
-      const response = await api.get(`/admin/maintenance-records/rejected/${category}`)
-      if (response.data.success) {
-        setRejectedRecords(response.data.data)
-      }
-    } catch  {
-      // Silent error for rejected records
-    }
-  }, [category])
-
-  useEffect(() => {
-    fetchPendingRecords()
-    fetchRejectedRecords()
-  }, [fetchPendingRecords, fetchRejectedRecords])
+  const {
+    pendingRecords,
+    rejectedRecords,
+    loading,
+    error: fetchError,
+    setError: setFetchError,
+    acceptRecord,
+    rejectRecord,
+    deleteRecord: deleteRecordService,
+  } = useMaintenanceApprovals(category, onPendingCountChange)
 
   const handlePreviewPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
-    const token = localStorage.getItem('auth_token')
-    
-    if (!token) {
-      setError('Invalid Credentials')
-      return
-    }
-    
     setPreviewLoading(recordId)
     
     try {
-      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/preview`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/pdf'
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        window.open(url, '_blank')
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url)
-        }, 10000)
-      } else {
-        setError('Failed to open preview PDF')
-      }
+      const response = await maintenanceService.previewRecordPdf(recordId)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+      }, 10000)
     } catch (error) {
       setError('Failed to open preview PDF: ' + error.message)
     } finally {
@@ -104,36 +58,17 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
   }
 
   const handleDownloadPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
-    const token = localStorage.getItem('auth_token')
-    
-    if (!token) {
-      setError('Invalid Credentials')
-      return
-    }
-    
     try {
-      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/pdf`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/pdf'
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `maintenance_record_${recordId}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      } else {
-        setError('Failed to download PDF')
-      }
+      const response = await maintenanceService.downloadRecordPdf(recordId)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `maintenance_record_${recordId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       setError('Failed to download PDF: ' + error.message)
     }
@@ -163,15 +98,16 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
         setMessage('')
         
         try {
-          const response = await api.post(`/admin/maintenance-records/${recordId}/accept`)
-          if (response.data.success) {
+          const result = await acceptRecord(recordId)
+          if (result.success) {
             setMessage('Record accepted successfully')
-            fetchPendingRecords()
-            fetchRejectedRecords()
-            // Count will be updated via fetchPendingRecords callback
+            setFetchError('')
+            setError('')
+          } else {
+            setError(result.message || 'Failed to accept record')
           }
         } catch (err) {
-          setError(err.response?.data?.message || 'Failed to accept record')
+          setError(err?.message || 'Failed to accept record')
         } finally {
           setActionLoading(null)
         }
@@ -191,15 +127,16 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
         setMessage('')
         
         try {
-          const response = await api.post(`/admin/maintenance-records/${recordId}/reject`)
-          if (response.data.success) {
+          const result = await rejectRecord(recordId)
+          if (result.success) {
             setMessage('Record rejected successfully')
-            fetchPendingRecords()
-            fetchRejectedRecords()
-            // Count will be updated via fetchPendingRecords callback
+            setFetchError('')
+            setError('')
+          } else {
+            setError(result.message || 'Failed to reject record')
           }
         } catch (err) {
-          setError(err.response?.data?.message || 'Failed to reject record')
+          setError(err?.message || 'Failed to reject record')
         } finally {
           setActionLoading(null)
         }
@@ -225,15 +162,16 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
         setMessage('')
         
         try {
-          const response = await api.delete(`/admin/maintenance-records/${recordId}`)
-          if (response.data.success) {
+          const result = await deleteRecordService(recordId)
+          if (result.success) {
             setMessage('Record deleted successfully')
-            fetchPendingRecords()
-            fetchRejectedRecords()
-            // Count will be updated via fetchPendingRecords callback
+            setFetchError('')
+            setError('')
+          } else {
+            setError(result.message || 'Failed to delete record')
           }
         } catch (err) {
-          setError(err.response?.data?.message || 'Failed to delete record')
+          setError(err?.message || 'Failed to delete record')
         } finally {
           setDeleteLoading(null)
         }
@@ -257,6 +195,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
   })
 
   const recordsToShow = activeTab === 'pending' ? filteredPendingRecords : filteredRejectedRecords
+  const displayError = error || fetchError
 
   return (
     <div className="space-y-6">
@@ -280,11 +219,14 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
         />
       )}
       
-      {error && (
+      {displayError && (
         <Alert
           variant="error"
-          message={error}
-          onClose={() => setError('')}
+          message={displayError}
+          onClose={() => {
+            setError('')
+            setFetchError('')
+          }}
         />
       )}
 
@@ -408,10 +350,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                       disabled={previewLoading === record.id || deleteLoading === record.id}
                     >
                       {previewLoading === record.id ? (
-                        <div className="flex w-full items-center justify-center gap-2">
-                          <Skeleton className="h-4 w-4 rounded-full" />
-                          <Skeleton className="h-4 w-16 rounded-md" />
-                        </div>
+                        <ButtonLoader labelClassName="w-16" className="w-auto" />
                       ) : (
                         <Eye className="h-4 w-4 mr-2" />
                       )}
@@ -435,10 +374,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                           disabled={actionLoading === record.id}
                         >
                           {actionLoading === record.id ? (
-                            <div className="flex w-full items-center justify-center gap-2">
-                              <Skeleton className="h-4 w-4 rounded-full" />
-                              <Skeleton className="h-4 w-16 rounded-md" />
-                            </div>
+                            <ButtonLoader labelClassName="w-16" className="w-auto" />
                           ) : (
                             <Check className="h-4 w-4 mr-2" />
                           )}
@@ -451,10 +387,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                           disabled={actionLoading === record.id}
                         >
                           {actionLoading === record.id ? (
-                            <div className="flex w-full items-center justify-center gap-2">
-                              <Skeleton className="h-4 w-4 rounded-full" />
-                              <Skeleton className="h-4 w-16 rounded-md" />
-                            </div>
+                            <ButtonLoader labelClassName="w-16" className="w-auto" />
                           ) : (
                             <X className="h-4 w-4 mr-2" />
                           )}
@@ -472,10 +405,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                         className="bg-red-600 hover:bg-red-700"
                       >
                         {deleteLoading === record.id ? (
-                          <div className="flex w-full items-center justify-center gap-2">
-                            <Skeleton className="h-4 w-4 rounded-full" />
-                            <Skeleton className="h-4 w-20 rounded-md" />
-                          </div>
+                          <ButtonLoader labelClassName="w-20" className="w-auto" />
                         ) : (
                           <Trash2 className="h-4 w-4 mr-2" />
                         )}
@@ -494,4 +424,3 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
 }
 
 export default AcceptManagement
-

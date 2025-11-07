@@ -1,21 +1,22 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../utils/api'
-
-const AuthContext = createContext()
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+import { useAuthActions } from '../hooks/useAuthActions'
+import { AuthContext } from './AuthContextBase'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [employee, setEmployee] = useState(null)
   const [loading, setLoading] = useState(true)
   const authCheckedRef = useRef(false)
+
+  const {
+    loginAdmin,
+    authenticateEmployee,
+    logoutAdmin,
+    logoutEmployee,
+    updateAdmin,
+    updateEmployee,
+  } = useAuthActions({ setUser, setEmployee, authCheckedRef })
 
   const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('auth_token')
@@ -118,150 +119,16 @@ export const AuthProvider = ({ children }) => {
     checkAuth()
   }, [checkAuth])
 
-  const adminLogin = async (email, password) => {
-    try {
-      const response = await api.post('/admin/login', { email, password })
-      if (response.data.success) {
-        localStorage.setItem('auth_token', response.data.token)
-        localStorage.setItem('auth_type', 'admin')
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
-        setUser(response.data.user)
-        setEmployee(null)
-        return { success: true }
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Login failed' 
-      }
-    }
-  }
-
-  const employeeAuth = async (name, identityPhoto) => {
-    try {
-      const formData = new FormData()
-      formData.append('name', name)
-      formData.append('identity_photo', identityPhoto)
-
-      const response = await api.post('/employee/auth', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-
-      if (response.data.success) {
-        localStorage.setItem('auth_token', response.data.token)
-        localStorage.setItem('auth_type', 'employee')
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
-        setEmployee(response.data.employee)
-        setUser(null)
-        return { success: true }
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Authentication failed' 
-      }
-    }
-  }
-
-  const adminLogout = async () => {
-    try {
-      await api.post('/admin/logout')
-    } catch (error) {
-      // swallow logout error
-    } finally {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_type')
-      delete api.defaults.headers.common['Authorization']
-      setUser(null)
-      setEmployee(null)
-      authCheckedRef.current = false
-    }
-  }
-
-  const employeeLogout = async () => {
-    try {
-      await api.post('/employee/logout')
-    } catch (error) {
-      // swallow logout error
-    } finally {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_type')
-      delete api.defaults.headers.common['Authorization']
-      setUser(null)
-      setEmployee(null)
-      authCheckedRef.current = false
-    }
-  }
-
-  const updateAdminProfile = async (profileData) => {
-    try {
-      const formData = new FormData()
-      formData.append('name', profileData.name)
-      formData.append('email', profileData.email)
-      if (profileData.signature) {
-        formData.append('signature', profileData.signature)
-      }
-      // Add method spoofing for PATCH request
-      formData.append('_method', 'PATCH')
-
-      const response = await api.post('/admin/profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-
-      if (response.data.success) {
-        setUser(response.data.user)
-        return { success: true }
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Update failed' 
-      }
-    }
-  }
-
-  const updateEmployeeProfile = async (profileData) => {
-    try {
-      const formData = new FormData()
-      formData.append('name', profileData.name)
-      if (profileData.signature) {
-        formData.append('signature', profileData.signature)
-      }
-      // Add method spoofing for PATCH request
-      formData.append('_method', 'PATCH')
-
-      const response = await api.post('/employee/profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-
-      if (response.data.success) {
-        setEmployee(response.data.employee)
-        return { success: true }
-      }
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Update failed' 
-      }
-    }
-  }
-
   const value = {
     user,
     employee,
     loading,
-    adminLogin,
-    employeeAuth,
-    adminLogout,
-    employeeLogout,
-    updateAdminProfile,
-    updateEmployeeProfile,
+    adminLogin: loginAdmin,
+    employeeAuth: authenticateEmployee,
+    adminLogout: logoutAdmin,
+    employeeLogout: logoutEmployee,
+    updateAdminProfile: updateAdmin,
+    updateEmployeeProfile: updateEmployee,
     checkAuth,
     isAdmin: !!user,
     isEmployee: !!employee,

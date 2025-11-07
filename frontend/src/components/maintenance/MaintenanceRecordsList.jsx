@@ -5,8 +5,9 @@ import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
 import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Search, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
-import api from '../../utils/api'
+import { maintenanceService } from '../../services/maintenanceService'
 
 const MaintenanceRecordsList = ({ category }) => {
   const [records, setRecords] = useState([])
@@ -27,12 +28,11 @@ const MaintenanceRecordsList = ({ category }) => {
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await api.get('/admin/maintenance-records', {
-        params: { category }
-      })
-      
-      if (response.data.success) {
-        setRecords(response.data.data)
+      const response = await maintenanceService.fetchAdminRecords({ category })
+      if (response.success) {
+        setRecords(response.data)
+      } else {
+        setError(response.message || 'Failed to load maintenance records')
       }
     } catch {
       setError('Failed to load maintenance records')
@@ -46,37 +46,17 @@ const MaintenanceRecordsList = ({ category }) => {
   }, [fetchRecords])
 
   const handleDownloadPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
-    const token = localStorage.getItem('auth_token')
-    
-    if (!token) {
-      setError('Invalid Credentials')
-      return
-    }
-    
     try {
-      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/pdf`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/pdf'
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `maintenance_record_${recordId}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-      } else {
-        await response.text()
-        setError('Failed to download PDF')
-      }
+      const response = await maintenanceService.downloadRecordPdf(recordId)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `maintenance_record_${recordId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       setError('Failed to download PDF: ' + error.message)
     }
@@ -96,10 +76,12 @@ const MaintenanceRecordsList = ({ category }) => {
         setMessage('')
         
         try {
-          const response = await api.delete(`/admin/maintenance-records/${recordId}`)
-          if (response.data.success) {
-            setMessage(response.data.message || 'Record deleted successfully')
+          const response = await maintenanceService.deleteRecord(recordId)
+          if (response.success) {
+            setMessage(response.message || 'Record deleted successfully')
             fetchRecords()
+          } else {
+            setError(response.message || 'Failed to delete record')
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Failed to delete record')
@@ -112,36 +94,15 @@ const MaintenanceRecordsList = ({ category }) => {
   }
 
   const handlePreviewPDF = async (recordId) => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
-    const token = localStorage.getItem('auth_token')
-    
-    if (!token) {
-      setError('Invalid Credentials')
-      return
-    }
-    
     setPreviewLoading(recordId)
-    
     try {
-      const response = await fetch(`${apiBaseUrl}/maintenance-records/${recordId}/preview`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/pdf'
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        window.open(url, '_blank')
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url)
-        }, 10000)
-      } else {
-        await response.text()
-        setError('Failed to open preview PDF')
-      }
+      const response = await maintenanceService.previewRecordPdf(recordId)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+      }, 10000)
     } catch (error) {
       setError('Failed to open preview PDF: ' + error.message)
     } finally {
@@ -286,10 +247,7 @@ const MaintenanceRecordsList = ({ category }) => {
                       disabled={previewLoading === record.id}
                     >
                       {previewLoading === record.id ? (
-                        <div className="flex w-full items-center justify-center gap-2">
-                          <Skeleton className="h-4 w-4 rounded-full" />
-                          <Skeleton className="h-4 w-14 rounded-md" />
-                        </div>
+                        <ButtonLoader labelClassName="w-14" className="w-auto" />
                       ) : (
                         <Eye className="h-4 w-4 mr-2" />
                       )}
@@ -312,10 +270,7 @@ const MaintenanceRecordsList = ({ category }) => {
                       className="bg-red-600 hover:bg-red-700"
                     >
                       {deleteRecordLoading === record.id ? (
-                        <div className="flex w-full items-center justify-center gap-2">
-                          <Skeleton className="h-4 w-4 rounded-full" />
-                          <Skeleton className="h-4 w-20 rounded-md" />
-                        </div>
+                        <ButtonLoader labelClassName="w-20" className="w-auto" />
                       ) : (
                         <Trash2 className="h-4 w-4 mr-2" />
                       )}

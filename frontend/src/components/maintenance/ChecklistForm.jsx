@@ -4,9 +4,9 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { CheckCircle, XCircle, Camera, Upload, ChevronDown, ChevronUp } from 'lucide-react'
-import api from '../../utils/api'
+import { maintenanceService } from '../../services/maintenanceService'
 
 const DEFAULT_NOTES_TEMPLATE = 
 `Host Name : \nIP address : \nMac Address : `;
@@ -343,13 +343,9 @@ const ChecklistForm = ({ template, onSuccess }) => {
         formData.append(`device_photos[]`, photo)
       })
 
-      const response = await api.post('/employee/maintenance-records', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      const response = await maintenanceService.submitMaintenanceRecord(formData)
 
-      if (response.data.success) {
+      if (response.success) {
         const successMsg = 'Maintenance record berhasil disimpan'
         setMessage(successMsg)
         
@@ -767,10 +763,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={loading} size="lg">
           {loading ? (
-            <div className="flex w-full items-center justify-center gap-2">
-              <Skeleton className="h-4 w-4 rounded-full" />
-              <Skeleton className="h-4 w-32 rounded-md" />
-            </div>
+            <ButtonLoader labelClassName="w-32" />
           ) : (
             'Simpan Maintenance Record'
           )}

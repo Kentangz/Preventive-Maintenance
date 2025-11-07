@@ -5,12 +5,20 @@ import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
 import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Edit, Trash2, Search, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown, PcCase, Hash, QrCode, MapPin } from 'lucide-react'
-import api from '../../utils/api'
+import { useAdminTemplates } from '../../hooks/useAdminTemplates'
 
 const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternalSuccess }) => {
-  const [templates, setTemplates] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+    templates,
+    loading,
+    error: fetchError,
+    setError: setFetchError,
+    deleteTemplate,
+    duplicateTemplate,
+  } = useAdminTemplates()
+
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -27,9 +35,7 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
     variant: 'default'
   })
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
+  const displayError = error || fetchError
 
   useEffect(() => {
     if (externalSuccess) {
@@ -38,24 +44,9 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
     }
   }, [externalSuccess, onClearExternalSuccess])
 
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true)
-      const response = await api.get('/admin/checklist-templates')
-      
-      if (response.data.success) {
-        setTemplates(response.data.data)
-        setError('')
-      }
-    } catch {
-      setError('Failed to load templates')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleDelete = async (id) => {
     setSuccess('')
+    setError('')
     setConfirmDialog({
       open: true,
       title: 'Delete Template',
@@ -63,16 +54,19 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
       onConfirm: async () => {
         try {
           setDeletingId(id)
-          const response = await api.delete(`/admin/checklist-templates/${id}`)
-          
-          if (response.data.success) {
-            setTemplates(templates.filter(t => t.id !== id))
-            if (onRefresh) onRefresh()
+          const result = await deleteTemplate(id)
+
+          if (result.success) {
+            onRefresh?.()
+            setFetchError('')
             setError('')
             setSuccess('Template berhasil dihapus')
+          } else {
+            setError(result.message || 'Failed to delete template')
+            setSuccess('')
           }
-        } catch {
-          setError('Failed to delete template')
+        } catch (err) {
+          setError(err?.message || 'Failed to delete template')
           setSuccess('')
         } finally {
           setDeletingId(null)
@@ -86,17 +80,19 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
     try {
       setDuplicatingId(template.id)
       setSuccess('')
-      
-      const response = await api.post(`/admin/checklist-templates/${template.id}/duplicate`)
-      
-      if (response.data.success) {
-        await fetchTemplates()
-        if (onRefresh) onRefresh()
+      const result = await duplicateTemplate(template.id)
+
+      if (result.success) {
+        onRefresh?.()
+        setFetchError('')
         setError('')
         setSuccess('Template berhasil diduplikasi')
+      } else {
+        setError(result.message || 'Failed to duplicate template')
+        setSuccess('')
       }
-    } catch {
-      setError('Failed to duplicate template')
+    } catch (err) {
+      setError(err?.message || 'Failed to duplicate template')
       setSuccess('')
     } finally {
       setDuplicatingId(null)
@@ -264,11 +260,14 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
         />
       )}
 
-      {error && (
+      {displayError && (
         <Alert
           variant="error"
-          message={error}
-          onClose={() => setError('')}
+          message={displayError}
+          onClose={() => {
+            setError('')
+            setFetchError('')
+          }}
         />
       )}
 
@@ -400,10 +399,7 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
                           disabled={duplicatingId === template.id}
                         >
                           {duplicatingId === template.id ? (
-                            <div className="flex w-full items-center justify-center gap-2">
-                              <Skeleton className="h-4 w-4 rounded-full" />
-                              <Skeleton className="h-4 w-16 rounded-md" />
-                            </div>
+                            <ButtonLoader labelClassName="w-16" className="w-auto" />
                           ) : (
                             <>
                               <Copy className="h-4 w-4 sm:mr-2" />
@@ -419,10 +415,7 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
                           className="text-destructive hover:text-destructive"
                         >
                           {deletingId === template.id ? (
-                            <div className="flex w-full items-center justify-center gap-2">
-                              <Skeleton className="h-4 w-4 rounded-full" />
-                              <Skeleton className="h-4 w-16 rounded-md" />
-                            </div>
+                            <ButtonLoader labelClassName="w-16" className="w-auto" />
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4 sm:mr-2" />

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import Alert from '../ui/Alert'
-import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { Shield, Mail, Lock } from 'lucide-react'
 
 const AdminLogin = () => {
@@ -141,10 +141,7 @@ const AdminLogin = () => {
             
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
-                <div className="flex w-full items-center justify-center gap-2">
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                  <Skeleton className="h-4 w-16 rounded-md" />
-                </div>
+                <ButtonLoader labelClassName="w-16" />
               ) : (
                 'Masuk'
               )}

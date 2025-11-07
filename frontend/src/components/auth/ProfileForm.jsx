@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { Skeleton } from '../ui/Skeleton'
+import ButtonLoader from '../ui/ButtonLoader'
 import { User, Mail, Upload, X } from 'lucide-react'
 
 const ProfileForm = () => {
@@ -214,10 +214,7 @@ const ProfileForm = () => {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
-              <div className="flex w-full items-center justify-center gap-2">
-                <Skeleton className="h-4 w-4 rounded-full" />
-                <Skeleton className="h-4 w-24 rounded-md" />
-              </div>
+              <ButtonLoader labelClassName="w-24" />
             ) : (
               'Simpan Perubahan'
             )}

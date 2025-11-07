@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import Sidebar from '../components/layout/Sidebar'
 import ProfileForm from '../components/auth/ProfileForm'
 import ChecklistTemplateSelector from '../components/maintenance/ChecklistTemplateSelector'
