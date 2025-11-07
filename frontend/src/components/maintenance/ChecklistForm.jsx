@@ -149,9 +149,8 @@ const ChecklistForm = ({ template, onSuccess }) => {
       setStream(mediaStream)
       setShowCamera(true)
       setError('')
-    } catch (err) {
+    } catch {
       setError('Tidak dapat mengakses kamera. Pastikan izin kamera sudah diberikan.')
-      console.error('Camera error:', err)
     }
   }
 
@@ -379,7 +378,6 @@ const ChecklistForm = ({ template, onSuccess }) => {
         }, 1000)
       }
     } catch (err) {
-      console.error('Error:', err.response?.data)
       const errorMessage = err.response?.data?.message || 
                           (err.response?.data?.errors ? JSON.stringify(err.response.data.errors) : 'Gagal menyimpan maintenance record')
       setError(errorMessage)

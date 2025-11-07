@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post('/admin/logout')
     } catch (error) {
-      console.error('Logout error:', error)
+      // swallow logout error
     } finally {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_type')
@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post('/employee/logout')
     } catch (error) {
-      console.error('Logout error:', error)
+      // swallow logout error
     } finally {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_type')

@@ -74,12 +74,10 @@ const MaintenanceRecordsList = ({ category }) => {
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       } else {
-        const errorText = await response.text()
-        console.error('Error response:', errorText)
+        await response.text()
         setError('Failed to download PDF')
       }
     } catch (error) {
-      console.error('Error downloading PDF:', error)
       setError('Failed to download PDF: ' + error.message)
     }
   }
@@ -141,12 +139,10 @@ const MaintenanceRecordsList = ({ category }) => {
           window.URL.revokeObjectURL(url)
         }, 10000)
       } else {
-        const errorText = await response.text()
-        console.error('Error response:', errorText)
+        await response.text()
         setError('Failed to open preview PDF')
       }
     } catch (error) {
-      console.error('Error previewing PDF:', error)
       setError('Failed to open preview PDF: ' + error.message)
     } finally {
       setPreviewLoading(null)
