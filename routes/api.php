@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // PDF Generation (Both admin and employee)
+    Route::post('/admin/checklist-templates/preview-pdf', [ChecklistController::class, 'previewTemplatePDF']);
     Route::get('/maintenance-records/{id}/pdf', [ChecklistController::class, 'generatePDF']); // Download PDF
     Route::get('/maintenance-records/{id}/preview', [ChecklistController::class, 'previewPDF']); // Preview PDF
 });

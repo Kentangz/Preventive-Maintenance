@@ -276,23 +276,40 @@ class ChecklistController extends Controller
             ], 404);
         }
 
-        // Create new template with duplicated data
+        $baseName = $template->name;
+        $baseDeviceName = $template->device_fields['device'] ?? '';
+
+        $baseName = preg_replace('/ \(Copy[0-9]*\)$/', '', $baseName);
+        $baseDeviceName = preg_replace('/ \(Copy[0-9]*\)$/', '', $baseDeviceName);
+
+        $newSuffix = ' (Copy)';
+        $newName = $baseName . $newSuffix;
+        $counter = 1;
+
+        while (ChecklistTemplate::where('name', $newName)->exists()) {
+            $newSuffix = " (Copy{$counter})";
+            $newName = $baseName . $newSuffix;
+            $counter++;
+        }
+
+        $newDeviceFields = $template->device_fields;
+        $newDeviceFields['device'] = $baseDeviceName . $newSuffix;
+
         $newTemplate = ChecklistTemplate::create([
             'category' => $template->category,
-            'name' => $template->name . ' (Copy)',
-            'device_fields' => $template->device_fields,
+            'name' => $newName, 
+            'device_fields' => $newDeviceFields,
             'configuration_items' => $template->configuration_items,
             'special_fields' => $template->special_fields,
-            'is_active' => false, // Set to inactive by default
+            'is_active' => false,
         ]);
 
-        // Duplicate checklist items
         foreach ($template->items as $item) {
             ChecklistItem::create([
                 'checklist_template_id' => $newTemplate->id,
                 'title' => $item->title,
                 'columns' => $item->columns,
-                'items' => $item->items, // merge_columns already included in items JSON array
+                'items' => $item->items,
                 'order' => $item->order,
             ]);
         }
@@ -1084,6 +1101,128 @@ class ChecklistController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete record: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate PDF preview for a template structure (Admin)
+     */
+    public function previewTemplatePDF(Request $request)
+    {
+        try {
+            $templateData = $request->all();
+
+            $dummyTemplate = (object) [
+                'name' => $templateData['name'] ?? 'Template Preview',
+                'category' => $templateData['category'] ?? 'unknown',
+                'device_fields' => $templateData['device_fields'] ?? [],
+                'configuration_items' => $templateData['configuration_items'] ?? [],
+                'special_fields' => $templateData['special_fields'] ?? [],
+                'items' => collect($templateData['items'] ?? [])->map(function ($item) {
+                    return (object) [
+                        'title' => $item['title'] ?? '',
+                        'columns' => $item['columns'] ?? [],
+                        'items' => $item['items'] ?? [],
+                        'order' => $item['order'] ?? 0,
+                    ];
+                }),
+            ];
+
+            $dummyResponses = [];
+            foreach ($dummyTemplate->items as $sectionIndex => $section) {
+                $sectionItems = [];
+                foreach ($section->items as $item) {
+                    $item = (array) $item;
+
+                    if (isset($item['isInkTonerRibbon']) && $item['isInkTonerRibbon']) {
+                        $colors = [];
+                        foreach (($item['colors'] ?? []) as $color) {
+                            $color = (array) $color;
+                            $colors[] = ['name' => $color['name'] ?? 'Warna', 'percentage' => '...%'];
+                        }
+                        $sectionItems[] = [
+                            'isInkTonerRibbon' => true,
+                            'description' => $item['description'] ?? 'Ink/Toner/Ribbon Type',
+                            'colors' => $colors,
+                            'merge_columns' => $item['merge_columns'] ?? false
+                        ];
+                    } else if (isset($item['merge_columns']) && $item['merge_columns']) {
+                        $sectionItems[] = [
+                            'description' => $item['description'] ?? 'Item Gabungan',
+                            'merged_text' => '(Preview field gabungan)',
+                            'merge_columns' => true
+                        ];
+                    } else {
+                        $sectionItems[] = [
+                            'description' => $item['description'] ?? 'Item Normal',
+                            'normal' => false,
+                            'error' => false,
+                            'information' => '(Preview field informasi)',
+                            'merge_columns' => false
+                        ];
+                    }
+                }
+                $dummyResponses[] = [
+                    'sectionIndex' => $sectionIndex,
+                    'sectionTitle' => $section->title,
+                    'items' => $sectionItems,
+                ];
+            }
+
+            $dummyStokTinta = [];
+            if (isset($templateData['special_fields']['stok_tinta'])) {
+                foreach ($templateData['special_fields']['stok_tinta'] as $stok) {
+                    $dummyStokTinta[] = '...';
+                }
+            }
+
+            $record = new \App\Models\MaintenanceRecord();
+            $record->device_data = $templateData['device_fields'] ?? [];
+            $record->checklist_responses = $dummyResponses;
+            $record->stok_tinta_responses = $dummyStokTinta;
+            $record->notes = "Ini adalah preview template.\nCatatan akan muncul di sini.";
+            $record->employee = (object)['name' => '(Nama Karyawan)'];
+
+            $recordForPdf = clone $record;
+            $recordForPdf->template = $dummyTemplate;
+
+            $admin = null;
+            $dateFormatted = (new \DateTime())->format('d F Y');
+            $storageUrl = asset('storage/');
+
+            $checklistHtml = view('pdfs.checklist', [
+                'record' => $recordForPdf,
+                'date' => $dateFormatted,
+                'storageUrl' => $storageUrl,
+                'admin' => $admin,
+                'showSignatures' => false,
+            ])->render();
+
+            $fullHtml = '
+            <html>
+            <head>
+                <style>
+                    /* Minimal styling untuk PDF */
+                    @page { margin: 15mm; }
+                    body { font-family: Arial, sans-serif; background: white; }
+                </style>
+            </head>
+            <body>
+                ' . $checklistHtml . '
+            </body>
+            </html>';
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($fullHtml);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOption('enable-local-file-access', true);
+
+            return $pdf->stream('te mplate_preview.pdf');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Template PDF Preview Error: ' . $e->getMessage() . ' on line ' . $e->getLine());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat preview PDF: ' . $e->getMessage()
             ], 500);
         }
     }

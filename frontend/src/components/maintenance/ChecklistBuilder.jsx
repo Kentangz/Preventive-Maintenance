@@ -30,9 +30,8 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [previewMode, setPreviewMode] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false) 
   const [openSectionIndex, setOpenSectionIndex] = useState(0)
-
   const [deleteModalState, setDeleteModalState] = useState({
     isOpen: false,
     index: null,
@@ -83,7 +82,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       }))
     }
   }
-
   const addChecklistItem = () => {
     const newSectionIndex = formData.items.length 
     setFormData(prev => ({
@@ -100,7 +98,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     }))
     setOpenSectionIndex(newSectionIndex)
   }
-
   const performDeleteSection = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -110,7 +107,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       setOpenSectionIndex(null) 
     }
   }
-
   const handleDeleteSectionClick = (index) => {
     const section = formData.items[index]
     if (section.items.length > 0) {
@@ -123,18 +119,15 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       performDeleteSection(index)
     }
   }
-
   const handleConfirmDelete = () => {
     if (deleteModalState.index !== null) {
       performDeleteSection(deleteModalState.index)
     }
     setDeleteModalState({ isOpen: false, index: null, itemCount: 0 })
   }
-
   const handleCancelDelete = () => {
     setDeleteModalState({ isOpen: false, index: null, itemCount: 0 })
   }
-
   const addItemToSection = (sectionIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items.push({
@@ -146,8 +139,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
-
-  // Special functions for Ink/Toner/Ribbon type
   const addInkTonerRibbonItem = (sectionIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items.push({
@@ -243,6 +234,37 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
+
+  const handlePreviewPDF = async () => {
+    setPreviewLoading(true);
+    setError('');
+    
+    const validationResult = validateForm();
+    if (!validationResult.valid) {
+      setError(validationResult.message);
+      if (validationResult.sectionIndex !== undefined) {
+        setOpenSectionIndex(validationResult.sectionIndex);
+      }
+      setPreviewLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.post('/admin/checklist-templates/preview-pdf', formData, {
+        responseType: 'blob',
+      });
+
+      const file = new Blob([response.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, '_blank');
+      setTimeout(() => URL.revokeObjectURL(fileURL), 10000);
+
+    } catch (err) {
+      err
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const validateForm = () => {
     for (const [key, value] of Object.entries(formData.device_fields)) {
@@ -359,11 +381,17 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             </div>
             <div className="flex gap-2">
               <Button
+                type="button"
                 variant="outline"
-                onClick={() => setPreviewMode(!previewMode)}
+                onClick={handlePreviewPDF}
+                disabled={previewLoading || loading}
               >
-                {previewMode ? <Edit className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                {previewMode ? 'Edit' : 'Preview'}
+                {previewLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4 mr-2" />
+                )}
+                Preview PDF
               </Button>
             </div>
           </div>
@@ -387,58 +415,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             />
           )}
 
-          {previewMode ? (
-            <div className="space-y-6 p-4 border rounded-lg bg-muted/50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Preview Template</h3>
-                                 {template && template.id && (
-                   <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded">
-                     Preview PDF hanya tersedia setelah maintenance record dibuat
-                   </div>
-                 )}
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <strong>Category:</strong> {formData.category}
-                </div>
-                <div>
-                  <strong>Name:</strong> {formData.name || '(No name)'}
-                </div>
-                <div>
-                  <strong>Status:</strong> {formData.is_active ? 'Active' : 'Inactive'}
-                </div>
-                <div>
-                  <strong>Device Fields:</strong>
-                  <div className="ml-4 mt-2 space-y-1">
-                    <div>Device: {formData.device_fields.device || '-'}</div>
-                    <div>ID Tagging Asset: {formData.device_fields.id_tagging_asset || '-'}</div>
-                    <div>OpCo: {formData.device_fields.opco || '-'}</div>
-                    <div>Merk/Type: {formData.device_fields.merk_type || '-'}</div>
-                    <div>Serial Number: {formData.device_fields.serial_number || '-'}</div>
-                    <div>Location: {formData.device_fields.location || '-'}</div>
-                  </div>
-                </div>
-                <div>
-                  <strong>Checklist Items ({formData.items.length} sections):</strong>
-                  {formData.items.length === 0 ? (
-                    <div className="ml-4 mt-2 text-gray-500">No items yet</div>
-                  ) : (
-                    <div className="ml-4 mt-2 space-y-2">
-                      {formData.items.map((item, idx) => (
-                        <div key={idx} className="border-l-4 border-blue-500 pl-3">
-                          <div className="font-semibold">{item.title || 'Untitled Section'}</div>
-                          <div className="text-sm text-gray-600">
-                            {item.items.length} items
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Template Info */}
             <div className="space-y-4">
               <div>
@@ -535,7 +512,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                     <div className="space-y-4">
                       
                       <div className="flex items-center justify-between gap-3">
-                        {/* Input Judul (Mengisi sisa ruang) */}
                         <Input
                           placeholder="Section title"
                           value={item.title}
@@ -547,12 +523,10 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                           className="flex-1"
                           required
                         />
-
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="ghost" 
                             size="sm"
                             onClick={() => setOpenSectionIndex(openSectionIndex === sectionIndex ? null : sectionIndex)}
                             className="flex items-center gap-2 text-muted-foreground"
@@ -689,7 +663,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                           ))}
                         </div>
                       )}
-
                     </div>
                   </CardContent>
                 </Card>
@@ -728,7 +701,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
               </div>
             )}
             <div className="flex justify-end gap-2 border-t pt-4">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || previewLoading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -743,7 +716,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
               </Button>
             </div>
           </form>
-          )}
 
           <AlertDialog 
             open={deleteModalState.isOpen} 
