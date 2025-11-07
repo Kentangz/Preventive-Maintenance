@@ -49,8 +49,8 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
     setError('')
     setConfirmDialog({
       open: true,
-      title: 'Delete Template',
-      description: 'Are you sure you want to delete this template? Records created with this template will still be saved.',
+      title: 'Hapus Template',
+      description: 'Apakah Anda yakin ingin menghapus template ini? Catatan yang sudah dibuat dengan template ini akan tetap tersimpan.',
       onConfirm: async () => {
         try {
           setDeletingId(id)

@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import api from '../utils/api'
+import api, { setSessionExpiredHandler } from '../utils/api'
 import { useAuthActions } from '../hooks/useAuthActions'
+import { authService } from '../services/authService'
 import { AuthContext } from './AuthContextBase'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [employee, setEmployee] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState('')
   const authCheckedRef = useRef(false)
 
   const {
@@ -19,15 +21,23 @@ export const AuthProvider = ({ children }) => {
   } = useAuthActions({ setUser, setEmployee, authCheckedRef })
 
   const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('auth_token')
     const authType = localStorage.getItem('auth_type') // 'admin' | 'employee'
-    if (!token) {
+    
+    if (!authType) {
       setLoading(false)
       return
     }
-    
+
     if (authCheckedRef.current) return
     authCheckedRef.current = true
+
+    const handleUnauthorized = () => {
+      localStorage.removeItem('auth_type')
+      setUser(null)
+      setEmployee(null)
+      setLoading(false)
+      authCheckedRef.current = false
+    }
     
     // If we know the auth type, only check that endpoint to avoid 401 noise
     if (authType === 'admin') {
@@ -44,9 +54,7 @@ export const AuthProvider = ({ children }) => {
         })
         .catch(() => false)
       if (!ok) {
-        setUser(null)
-        setEmployee(null)
-        setLoading(false)
+        handleUnauthorized()
       }
       return
     }
@@ -65,9 +73,7 @@ export const AuthProvider = ({ children }) => {
         })
         .catch(() => false)
       if (!ok) {
-        setUser(null)
-        setEmployee(null)
-        setLoading(false)
+        handleUnauthorized()
       }
       return
     }
@@ -104,25 +110,46 @@ export const AuthProvider = ({ children }) => {
       .catch(() => false)
 
     if (!employeeOk) {
-      setUser(null)
-      setEmployee(null)
-      setLoading(false)
+      handleUnauthorized()
     }
   }, [])
 
-  useEffect(() => {
-    // Check for stored token on app start
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  const handleSessionExpired = useCallback(() => {
+    const authType = localStorage.getItem('auth_type')
+    
+    // Try to delete employee identity photo if session expired (snapshot already saved)
+    if (authType === 'employee') {
+      // Try to delete identity photo (may fail if session already expired, that's okay)
+      authService.deleteEmployeeIdentityPhoto().catch(() => {
+        // Ignore error - photo will remain if session already expired
+        // This is fine because snapshot is already saved in MaintenancePhoto
+      })
     }
+    
+    localStorage.removeItem('auth_type')
+    setUser(null)
+    setEmployee(null)
+    authCheckedRef.current = false
+    
+    setSessionExpiredMessage('Sesi Anda telah berakhir. Silakan login kembali.')
+    
+    setTimeout(() => {
+      setSessionExpiredMessage('')
+    }, 5000)
+  }, [])
+
+  useEffect(() => {
+    setSessionExpiredHandler(handleSessionExpired)
+    
     checkAuth()
-  }, [checkAuth])
+  }, [checkAuth, handleSessionExpired])
 
   const value = {
     user,
     employee,
     loading,
+    sessionExpiredMessage,
+    setSessionExpiredMessage,
     adminLogin: loginAdmin,
     employeeAuth: authenticateEmployee,
     adminLogout: logoutAdmin,

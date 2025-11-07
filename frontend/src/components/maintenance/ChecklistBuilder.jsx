@@ -718,10 +718,10 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
           <AlertDialog 
             open={deleteModalState.isOpen} 
             onOpenChange={(isOpen) => !isOpen && handleCancelDelete()}
-            title="Hapus Section?"
+            title="Hapus Bagian?"
             description={
               <>
-                Section ini berisi <strong>{deleteModalState.itemCount} item</strong>. Menghapus section juga akan menghapus semua item di dalamnya.
+                Bagian ini berisi <strong>{deleteModalState.itemCount} item</strong>. Menghapus bagian juga akan menghapus semua item di dalamnya.
                 <br />
                 Tindakan ini tidak dapat dibatalkan.
               </>

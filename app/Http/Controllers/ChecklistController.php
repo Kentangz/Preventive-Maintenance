@@ -297,7 +297,7 @@ class ChecklistController extends Controller
 
         $newTemplate = ChecklistTemplate::create([
             'category' => $template->category,
-            'name' => $newName, 
+            'name' => $newName,
             'device_fields' => $newDeviceFields,
             'configuration_items' => $template->configuration_items,
             'special_fields' => $template->special_fields,
@@ -501,9 +501,16 @@ class ChecklistController extends Controller
                 $templateData = $this->getTemplateData($record);
             }
 
+            // Ensure photos are loaded
+            if (!$record->relationLoaded('photos')) {
+                $record->load('photos');
+            }
+
             // Create a temporary record copy for PDF view (don't modify original record)
             $recordForPdf = clone $record;
             $recordForPdf->template = $templateData;
+            // Ensure photos relation is available on cloned record
+            $recordForPdf->setRelation('photos', $record->photos);
 
             // Format date to Indonesia format
             $formatter = new \IntlDateFormatter(
@@ -697,7 +704,19 @@ class ChecklistController extends Controller
         // Create PIC proof photo (use employee identity photo if available)
         $picProofPath = null;
         if ($employee->identity_photo) {
-            $picProofPath = $employee->identity_photo;
+            // Copy identity photo to snapshot folder to preserve it even if original is deleted
+            $originalPath = storage_path('app/public/' . $employee->identity_photo);
+            if (file_exists($originalPath)) {
+                $extension = pathinfo($employee->identity_photo, PATHINFO_EXTENSION);
+                $snapshotPath = 'maintenance_pic_proofs/record_' . $record->id . '_' . time() . '.' . $extension;
+
+                // Copy file to snapshot folder
+                Storage::disk('public')->put($snapshotPath, file_get_contents($originalPath));
+                $picProofPath = $snapshotPath;
+            } else {
+                // If original doesn't exist, use fallback
+                $picProofPath = $primaryPhotoPath;
+            }
         } else {
             // Use first device photo as fallback
             $picProofPath = $primaryPhotoPath;
@@ -709,7 +728,8 @@ class ChecklistController extends Controller
             'photo_path' => $picProofPath,
             'employee_data' => [
                 'name' => $employee->name,
-                'identity_photo' => $employee->identity_photo,
+                'identity_photo' => $employee->identity_photo, // Keep original path for reference
+                'identity_photo_snapshot' => $picProofPath, // Snapshot path
                 'signature' => $employee->signature,
                 'account_created_at' => $employee->created_at,
             ],
@@ -810,9 +830,16 @@ class ChecklistController extends Controller
             // Get template data (from template or snapshot)
             $templateData = $this->getTemplateData($record);
 
+            // Ensure photos are loaded
+            if (!$record->relationLoaded('photos')) {
+                $record->load('photos');
+            }
+
             // Create a temporary record copy for PDF view (don't modify original record)
             $recordForPdf = clone $record;
             $recordForPdf->template = $templateData;
+            // Ensure photos relation is available on cloned record
+            $recordForPdf->setRelation('photos', $record->photos);
 
             // Format date to Indonesia format
             $formatter = new \IntlDateFormatter(
@@ -929,9 +956,16 @@ class ChecklistController extends Controller
             // Get template data (from template or snapshot)
             $templateData = $this->getTemplateData($record);
 
+            // Ensure photos are loaded
+            if (!$record->relationLoaded('photos')) {
+                $record->load('photos');
+            }
+
             // Create a temporary record copy for PDF view (don't modify original record)
             $recordForPdf = clone $record;
             $recordForPdf->template = $templateData;
+            // Ensure photos relation is available on cloned record
+            $recordForPdf->setRelation('photos', $record->photos);
 
             // Format date to Indonesia format
             $formatter = new \IntlDateFormatter(

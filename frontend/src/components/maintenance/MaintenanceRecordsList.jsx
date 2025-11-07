@@ -64,12 +64,12 @@ const MaintenanceRecordsList = ({ category }) => {
 
   const handleDeleteRecord = async (recordId) => {
     const record = records.find(r => r.id === recordId)
-    const deviceName = record?.device_data?.device || 'this record'
+    const deviceName = record?.device_data?.device || 'catatan ini'
     
     setConfirmDialog({
       open: true,
-      title: 'Delete Maintenance Record',
-      description: `Are you sure you want to permanently delete the maintenance record for "${deviceName}"? This action cannot be undone. All data including PDF, photos, and records will be permanently deleted.`,  
+      title: 'Hapus Catatan Maintenance',
+      description: `Apakah Anda yakin ingin menghapus permanen catatan maintenance untuk "${deviceName}"? Tindakan ini tidak dapat dibatalkan. Seluruh data termasuk PDF, foto, dan catatan akan terhapus permanen.`,  
       onConfirm: async () => {
         setDeleteRecordLoading(recordId)
         setError('')

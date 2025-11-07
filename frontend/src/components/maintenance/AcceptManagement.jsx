@@ -91,7 +91,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     setConfirmDialog({
       open: true,
       title: 'Terima Submission',
-      description: 'Are you sure you want to accept this submission?',
+      description: 'Apakah Anda yakin ingin menerima pengajuan ini?',
       onConfirm: async () => {
         setActionLoading(recordId)
         setError('')
@@ -120,7 +120,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     setConfirmDialog({
       open: true,
       title: 'Tolak Submission',
-      description: 'Are you sure you want to reject this submission?',
+      description: 'Apakah Anda yakin ingin menolak pengajuan ini?',
       onConfirm: async () => {
         setActionLoading(recordId)
         setError('')
@@ -149,13 +149,13 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     const record = activeTab === 'pending' 
       ? pendingRecords.find(r => r.id === recordId)
       : rejectedRecords.find(r => r.id === recordId)
-    const deviceName = record?.device_data?.device || 'this record'
-    const statusText = activeTab === 'pending' ? 'pending' : 'rejected'
+    const deviceName = record?.device_data?.device || 'catatan ini'
+    const statusText = activeTab === 'pending' ? 'tertunda' : 'ditolak'
     
     setConfirmDialog({
       open: true,
-      title: 'Delete Maintenance Record',
-      description: `Are you sure you want to permanently delete the ${statusText} maintenance record for "${deviceName}"? This action cannot be undone. All data including photos and records will be permanently deleted.`,  
+      title: 'Hapus Catatan Maintenance',
+      description: `Apakah Anda yakin ingin menghapus permanen catatan maintenance berstatus ${statusText} untuk "${deviceName}"? Tindakan ini tidak dapat dibatalkan. Seluruh data termasuk foto dan catatan akan terhapus permanen.`,  
       onConfirm: async () => {
         setDeleteLoading(recordId)
         setError('')

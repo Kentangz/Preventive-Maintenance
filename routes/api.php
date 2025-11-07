@@ -24,6 +24,7 @@ Route::prefix('employee')->group(function () {
     Route::post('/logout', [AuthController::class, 'employeeLogout'])->middleware('auth:sanctum');
     Route::get('/me', [AuthController::class, 'getCurrentEmployee'])->middleware('auth:sanctum');
     Route::patch('/profile', [AuthController::class, 'updateEmployeeProfile'])->middleware('auth:sanctum');
+    Route::delete('/identity-photo', [AuthController::class, 'deleteEmployeeIdentityPhoto'])->middleware('auth:sanctum');
 });
 
 // Checklist Routes (Admin & Employee)
