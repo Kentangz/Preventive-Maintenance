@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { Skeleton } from '../components/ui/Skeleton'
 import { Shield, User, ArrowRight } from 'lucide-react'
 
 const Home = () => {
@@ -23,8 +24,32 @@ const Home = () => {
   // Show loading spinner while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background p-6">
+        <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-8">
+          <div className="flex justify-end">
+            <Skeleton className="h-9 w-32 rounded-md" />
+          </div>
+          <div className="text-center space-y-4">
+            <Skeleton className="mx-auto h-10 w-64" />
+            <Skeleton className="mx-auto h-6 w-80" />
+          </div>
+          <div className="grid gap-8 md:grid-cols-2">
+            {[...Array(2)].map((_, idx) => (
+              <Card key={idx} className="transition-shadow">
+                <CardHeader className="text-center space-y-4">
+                  <Skeleton className="mx-auto h-16 w-16 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="mx-auto h-6 w-40" />
+                    <Skeleton className="mx-auto h-4 w-52" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-11 w-full rounded-md" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

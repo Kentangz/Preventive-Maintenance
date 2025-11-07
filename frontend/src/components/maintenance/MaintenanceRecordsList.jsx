@@ -4,7 +4,8 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Search, Loader2, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { Search, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
 import api from '../../utils/api'
 
 const MaintenanceRecordsList = ({ category }) => {
@@ -161,9 +162,35 @@ const MaintenanceRecordsList = ({ category }) => {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading records...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-4">
+            <Skeleton className="h-10 w-full rounded-md" />
+          </CardContent>
+        </Card>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, idx) => (
+            <Card key={idx}>
+              <CardContent className="space-y-4 p-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <Skeleton className="h-3 w-4/6" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 w-24 rounded-md" />
+                  <Skeleton className="h-9 w-28 rounded-md" />
+                  <Skeleton className="h-9 w-32 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
@@ -263,7 +290,10 @@ const MaintenanceRecordsList = ({ category }) => {
                       disabled={previewLoading === record.id}
                     >
                       {previewLoading === record.id ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <div className="flex w-full items-center justify-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="h-4 w-14 rounded-md" />
+                        </div>
                       ) : (
                         <Eye className="h-4 w-4 mr-2" />
                       )}
@@ -286,7 +316,10 @@ const MaintenanceRecordsList = ({ category }) => {
                       className="bg-red-600 hover:bg-red-700"
                     >
                       {deleteRecordLoading === record.id ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <div className="flex w-full items-center justify-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="h-4 w-20 rounded-md" />
+                        </div>
                       ) : (
                         <Trash2 className="h-4 w-4 mr-2" />
                       )}

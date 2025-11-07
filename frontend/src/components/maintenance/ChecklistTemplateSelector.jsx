@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Input } from '../ui/Input'
-import { FileText, Loader2, Search } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { FileText, Search } from 'lucide-react'
 import api from '../../utils/api'
 
 const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
@@ -11,11 +12,7 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
   const [selectedTemplate, setSelectedTemplate] = useState(null)  
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [category])
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true)
       const response = await api.get(`/employee/checklist-templates/${category}`)
@@ -28,7 +25,11 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [category])
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template)
@@ -37,9 +38,30 @@ const ChecklistTemplateSelector = ({ category, onTemplateSelect }) => {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Memuat templates...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-4">
+            <Skeleton className="h-10 w-full rounded-md" />
+          </CardContent>
+        </Card>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, idx) => (
+            <Card key={idx}>
+              <CardContent className="space-y-4 p-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+                <div className="grid gap-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+                <Skeleton className="h-8 w-32 rounded-md" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }

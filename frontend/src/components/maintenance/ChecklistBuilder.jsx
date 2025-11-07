@@ -4,7 +4,8 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { Trash2, Plus, Save, Eye, Edit, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { Trash2, Plus, Save, Eye, Edit, ChevronDown, ChevronUp } from 'lucide-react'
 import { AlertDialog } from '../ui/AlertDialog' 
 import api from '../../utils/api'
 
@@ -348,21 +349,23 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
 
     try {
       let response
+      let successMessage
       if (template && template.id) {
         response = await api.put(`/admin/checklist-templates/${template.id}`, formData)
-        setMessage('Template updated successfully')
+        successMessage = 'Template berhasil diperbarui'
       } else {
         response = await api.post('/admin/checklist-templates', formData)
-        setMessage('Template created successfully')
+        successMessage = 'Template berhasil disimpan'
       }
+      setMessage(successMessage)
       
       if (response.data.success) {
         if (onSave) {
-          onSave()
+          onSave({ type: template && template.id ? 'update' : 'create', message: successMessage })
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save template')
+      setError(err.response?.data?.message || 'Gagal menyimpan template')
     } finally {
       setLoading(false)
     }
@@ -387,7 +390,10 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                 disabled={previewLoading || loading}
               >
                 {previewLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-4 w-20 rounded-md" />
+                  </div>
                 ) : (
                   <Eye className="h-4 w-4 mr-2" />
                 )}
@@ -566,7 +572,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => addInkTonerRibbonItem(sectionIndex)}
-                                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 dark:border-primary/30 dark:bg-primary/20 dark:hover:bg-primary/30"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Ink/Toner/Ribbon Type
@@ -580,7 +586,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                 <div className="space-y-3">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                      <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded dark:bg-primary/20">
                                         Ink/Toner/Ribbon Type
                                       </span>
                                     </div>
@@ -606,7 +612,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                       </Button>
                                     </div>
                                     {(subItem.colors || []).map((color, colorIndex) => (
-                                      <div key={colorIndex} className="flex gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                      <div key={colorIndex} className="flex gap-2 p-2 rounded border border-primary/30 bg-primary/10 dark:border-primary/25 dark:bg-primary/20">
                                         <Input
                                           placeholder="Color name (e.g., Black, Cyan)"
                                           value={color.name || ''}
@@ -645,7 +651,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                   </div>
-                                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                                  <div className="flex items-center gap-2 p-2 rounded border bg-muted">
                                     <input
                                       type="checkbox"
                                       id={`merge_columns_${sectionIndex}_${itemIndex}`}
@@ -653,7 +659,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                       onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
                                       className="h-4 w-4"
                                     />
-                                    <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-xs italic text-gray-500">
+                                    <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-xs italic text-muted-foreground">
                                       Gabungkan kolom (Normal, Error, Information) untuk item ini
                                     </label>
                                   </div>
@@ -703,10 +709,10 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button type="submit" disabled={loading || previewLoading}>
                 {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                  </div>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />

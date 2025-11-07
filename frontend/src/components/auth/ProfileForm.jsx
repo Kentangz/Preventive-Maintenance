@@ -5,7 +5,8 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { User, Mail, Upload, Loader2, X } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { User, Mail, Upload, X } from 'lucide-react'
 
 const ProfileForm = () => {
   const { user, employee, updateAdminProfile, updateEmployeeProfile, isAdmin } = useAuth()
@@ -14,6 +15,7 @@ const ProfileForm = () => {
   const [error, setError] = useState('')
   const [signaturePreview, setSignaturePreview] = useState(null)
   const signatureInputRef = useRef(null)
+  const ALLOWED_SIGNATURE_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
   
   const currentUser = user || employee
   const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_BASE_URL
@@ -51,6 +53,15 @@ const ProfileForm = () => {
   const handleSignatureChange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      if (!ALLOWED_SIGNATURE_TYPES.includes(file.type.toLowerCase())) {
+        setSignaturePreview(null)
+        setMessage('')
+        setError('Format tanda tangan harus JPG atau PNG')
+        if (signatureInputRef.current) {
+          signatureInputRef.current.value = ''
+        }
+        return
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         setSignaturePreview(reader.result)
@@ -187,12 +198,15 @@ const ProfileForm = () => {
                 {currentUser?.signature ? 'Ganti' : 'Upload'} Tanda Tangan
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Format file yang diperbolehkan: JPG, JPEG, PNG.
+            </p>
             
             <input
               ref={signatureInputRef}
               type="file"
               name="signature"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/jpg"
               onChange={handleSignatureChange}
               className="hidden"
             />
@@ -200,10 +214,10 @@ const ProfileForm = () => {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Menyimpan...
-              </>
+              <div className="flex w-full items-center justify-center gap-2">
+                <Skeleton className="h-4 w-4 rounded-full" />
+                <Skeleton className="h-4 w-24 rounded-md" />
+              </div>
             ) : (
               'Simpan Perubahan'
             )}

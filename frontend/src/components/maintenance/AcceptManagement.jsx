@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Search, Loader2, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { Search, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } from 'lucide-react'
 import api from '../../utils/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const AcceptManagement = ({ category, onPendingCountChange }) => {
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'rejected'
@@ -25,13 +27,9 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     onConfirm: null,
     variant: 'default'
   })
+  const { user } = useAuth()
 
-  useEffect(() => {
-    fetchPendingRecords()
-    fetchRejectedRecords()
-  }, [category])
-
-  const fetchPendingRecords = async () => {
+  const fetchPendingRecords = useCallback(async () => {
     try {
       setLoading(true)
       const response = await api.get(`/admin/maintenance-records/pending/${category}`)
@@ -50,9 +48,9 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [category, onPendingCountChange])
 
-  const fetchRejectedRecords = async () => {
+  const fetchRejectedRecords = useCallback(async () => {
     try {
       const response = await api.get(`/admin/maintenance-records/rejected/${category}`)
       if (response.data.success) {
@@ -61,7 +59,12 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     } catch  {
       // Silent error for rejected records
     }
-  }
+  }, [category])
+
+  useEffect(() => {
+    fetchPendingRecords()
+    fetchRejectedRecords()
+  }, [fetchPendingRecords, fetchRejectedRecords])
 
   const handlePreviewPDF = async (recordId) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
@@ -136,7 +139,20 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     }
   }
 
+  const ensureSignature = () => {
+    if (!user?.signature) {
+      setMessage('')
+      setError('Silakan upload tanda tangan Admin terlebih dahulu melalui halaman profil sebelum menerima submission.')
+      return false
+    }
+    return true
+  }
+
   const handleAccept = async (recordId) => {
+    if (!ensureSignature()) {
+      return
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Terima Submission',
@@ -315,12 +331,27 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
 
       {/* Records List */}
       {loading && recordsToShow.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading records...</p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(2)].map((_, idx) => (
+            <Card key={idx}>
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+                <div className="grid gap-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 w-24 rounded-md" />
+                  <Skeleton className="h-9 w-24 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : recordsToShow.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
@@ -377,7 +408,10 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                       disabled={previewLoading === record.id || deleteLoading === record.id}
                     >
                       {previewLoading === record.id ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <div className="flex w-full items-center justify-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="h-4 w-16 rounded-md" />
+                        </div>
                       ) : (
                         <Eye className="h-4 w-4 mr-2" />
                       )}
@@ -401,7 +435,10 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                           disabled={actionLoading === record.id}
                         >
                           {actionLoading === record.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <div className="flex w-full items-center justify-center gap-2">
+                              <Skeleton className="h-4 w-4 rounded-full" />
+                              <Skeleton className="h-4 w-16 rounded-md" />
+                            </div>
                           ) : (
                             <Check className="h-4 w-4 mr-2" />
                           )}
@@ -414,7 +451,10 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                           disabled={actionLoading === record.id}
                         >
                           {actionLoading === record.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <div className="flex w-full items-center justify-center gap-2">
+                              <Skeleton className="h-4 w-4 rounded-full" />
+                              <Skeleton className="h-4 w-16 rounded-md" />
+                            </div>
                           ) : (
                             <X className="h-4 w-4 mr-2" />
                           )}
@@ -432,7 +472,10 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                         className="bg-red-600 hover:bg-red-700"
                       >
                         {deleteLoading === record.id ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <div className="flex w-full items-center justify-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded-full" />
+                            <Skeleton className="h-4 w-20 rounded-md" />
+                          </div>
                         ) : (
                           <Trash2 className="h-4 w-4 mr-2" />
                         )}

@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const [showBuilder, setShowBuilder] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('printer')
+  const [templateSuccess, setTemplateSuccess] = useState('')
   const { user } = useAuth()
 
   const renderContent = () => {
@@ -82,7 +83,10 @@ const AdminDashboard = () => {
                 <ChecklistBuilder 
                   category={selectedCategory}
                   template={editingTemplate}
-                  onSave={() => {
+                  onSave={(result) => {
+                    if (result?.message) {
+                      setTemplateSuccess(result.message)
+                    }
                     setShowBuilder(false)
                     setEditingTemplate(null)
                   }}
@@ -92,6 +96,8 @@ const AdminDashboard = () => {
               <TemplateList 
                 onEdit={(template) => setEditingTemplate(template)}
                 onRefresh={() => {}}
+                externalSuccess={templateSuccess}
+                onClearExternalSuccess={() => setTemplateSuccess('')}
               />
             )}
           </div>

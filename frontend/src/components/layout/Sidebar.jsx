@@ -21,6 +21,10 @@ import { ThemeToggle } from '../ui/ThemeToggle'
 const Sidebar = ({ activeItem, onItemClick }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, employee, adminLogout, employeeLogout, isAdmin, isEmployee } = useAuth()
+  const STORAGE_BASE_URL = import.meta.env.VITE_STORAGE_BASE_URL
+  const employeePhotoUrl = isEmployee && employee?.identity_photo 
+    ? `${STORAGE_BASE_URL}/storage/${employee.identity_photo}` 
+    : null
 
   const adminMenuItems = [
     {
@@ -142,11 +146,19 @@ const Sidebar = ({ activeItem, onItemClick }) => {
           {/* User Info */}
           <div className="p-6 border-b">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-semibold">
-                  {currentUser?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
-              </div>
+              {employeePhotoUrl ? (
+                <img
+                  src={employeePhotoUrl}
+                  alt="User"
+                  className="w-20 h-20 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground font-semibold">
+                    {currentUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
               <div>
                 <p className="font-medium text-foreground">{currentUser?.name}</p>
                 <p className="text-sm text-muted-foreground">

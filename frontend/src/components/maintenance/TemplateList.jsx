@@ -4,13 +4,15 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Edit, Trash2, Search, Loader2, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown, PcCase, Hash, QrCode, MapPin } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { Edit, Trash2, Search, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown, PcCase, Hash, QrCode, MapPin } from 'lucide-react'
 import api from '../../utils/api'
 
-const TemplateList = ({ onEdit, onRefresh }) => {
+const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternalSuccess }) => {
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
@@ -29,6 +31,13 @@ const TemplateList = ({ onEdit, onRefresh }) => {
     fetchTemplates()
   }, [])
 
+  useEffect(() => {
+    if (externalSuccess) {
+      setSuccess(externalSuccess)
+      onClearExternalSuccess?.()
+    }
+  }, [externalSuccess, onClearExternalSuccess])
+
   const fetchTemplates = async () => {
     try {
       setLoading(true)
@@ -36,6 +45,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
       
       if (response.data.success) {
         setTemplates(response.data.data)
+        setError('')
       }
     } catch {
       setError('Failed to load templates')
@@ -45,6 +55,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
   }
 
   const handleDelete = async (id) => {
+    setSuccess('')
     setConfirmDialog({
       open: true,
       title: 'Delete Template',
@@ -58,9 +69,11 @@ const TemplateList = ({ onEdit, onRefresh }) => {
             setTemplates(templates.filter(t => t.id !== id))
             if (onRefresh) onRefresh()
             setError('')
+            setSuccess('Template berhasil dihapus')
           }
         } catch {
           setError('Failed to delete template')
+          setSuccess('')
         } finally {
           setDeletingId(null)
         }
@@ -72,6 +85,7 @@ const TemplateList = ({ onEdit, onRefresh }) => {
   const handleDuplicate = async (template) => {
     try {
       setDuplicatingId(template.id)
+      setSuccess('')
       
       const response = await api.post(`/admin/checklist-templates/${template.id}/duplicate`)
       
@@ -79,9 +93,11 @@ const TemplateList = ({ onEdit, onRefresh }) => {
         await fetchTemplates()
         if (onRefresh) onRefresh()
         setError('')
+        setSuccess('Template berhasil diduplikasi')
       }
     } catch {
       setError('Failed to duplicate template')
+      setSuccess('')
     } finally {
       setDuplicatingId(null)
     }
@@ -147,9 +163,50 @@ const TemplateList = ({ onEdit, onRefresh }) => {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading templates...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4 md:flex-row">
+              <Skeleton className="h-10 w-full md:flex-1 rounded-md" />
+              <Skeleton className="h-10 w-48 rounded-md" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <Skeleton className="h-6 w-48" />
+            <div className="flex gap-2">
+              {[...Array(4)].map((_, idx) => (
+                <Skeleton key={idx} className="h-9 w-24 rounded-md" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, idx) => (
+            <Card key={idx}>
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <div className="grid gap-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 w-32">
+                    <Skeleton className="h-9 w-full rounded-md" />
+                    <Skeleton className="h-9 w-full rounded-md" />
+                    <Skeleton className="h-9 w-full rounded-md" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
@@ -198,6 +255,14 @@ const TemplateList = ({ onEdit, onRefresh }) => {
           </div>
         </CardContent>
       </Card>
+
+      {success && (
+        <Alert
+          variant="success"
+          message={success}
+          onClose={() => setSuccess('')}
+        />
+      )}
 
       {error && (
         <Alert
@@ -335,7 +400,10 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                           disabled={duplicatingId === template.id}
                         >
                           {duplicatingId === template.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <div className="flex w-full items-center justify-center gap-2">
+                              <Skeleton className="h-4 w-4 rounded-full" />
+                              <Skeleton className="h-4 w-16 rounded-md" />
+                            </div>
                           ) : (
                             <>
                               <Copy className="h-4 w-4 sm:mr-2" />
@@ -351,7 +419,10 @@ const TemplateList = ({ onEdit, onRefresh }) => {
                           className="text-destructive hover:text-destructive"
                         >
                           {deletingId === template.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <div className="flex w-full items-center justify-center gap-2">
+                              <Skeleton className="h-4 w-4 rounded-full" />
+                              <Skeleton className="h-4 w-16 rounded-md" />
+                            </div>
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4 sm:mr-2" />

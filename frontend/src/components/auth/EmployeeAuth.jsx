@@ -7,7 +7,8 @@ import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import Alert from '../ui/Alert'
-import { User, Camera, Loader2, X, RefreshCw } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { User, Camera, X, RefreshCw } from 'lucide-react'
 
 const EmployeeAuth = () => {
   const [formData, setFormData] = useState({
@@ -171,8 +172,24 @@ const EmployeeAuth = () => {
   // Show loading spinner while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+          <Skeleton className="h-6 w-24 self-end" />
+          <Card>
+            <CardContent className="space-y-6 p-6">
+              <div className="flex flex-col items-center gap-3">
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -337,10 +354,10 @@ const EmployeeAuth = () => {
             
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memverifikasi...
-                </>
+                <div className="flex w-full items-center justify-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-24 rounded-md" />
+                </div>
               ) : (
                 'Masuk'
               )}

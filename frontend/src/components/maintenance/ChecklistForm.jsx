@@ -4,11 +4,14 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { CheckCircle, XCircle, Camera, Loader2, Upload, ChevronDown, ChevronUp } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { CheckCircle, XCircle, Camera, Upload, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '../../utils/api'
 
 const DEFAULT_NOTES_TEMPLATE = 
 `Host Name : \nIP address : \nMac Address : `;
+
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
 
 const ChecklistForm = ({ template, onSuccess }) => {
   const [deviceData, setDeviceData] = useState({
@@ -191,11 +194,16 @@ const ChecklistForm = ({ template, onSuccess }) => {
     const filesToAdd = files.slice(0, remainingSlots)
     
     filesToAdd.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const previewUrl = URL.createObjectURL(file)
-        setPhotos(prev => [...prev, file])
-        setPreviews(prev => [...prev, previewUrl])
+      const fileType = file.type.toLowerCase()
+      if (!ALLOWED_PHOTO_TYPES.includes(fileType)) {
+        setMessage('')
+        setError('Format foto perangkat harus JPG atau PNG')
+        return
       }
+
+      const previewUrl = URL.createObjectURL(file)
+      setPhotos(prev => [...prev, file])
+      setPreviews(prev => [...prev, previewUrl])
     })
   }
 
@@ -490,13 +498,13 @@ const ChecklistForm = ({ template, onSuccess }) => {
                       // Special UI for Ink/Toner/Ribbon type
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded dark:bg-primary/20">
                             Ink/Toner/Ribbon Type
                           </span>
                         </div>
                         <div className="space-y-2">
                           {(checklistResponses[sectionIndex]?.items[itemIndex]?.colors || []).map((color, colorIndex) => (
-                            <div key={colorIndex} className="flex items-center gap-4 p-2 bg-blue-50 rounded border border-blue-200">
+                            <div key={colorIndex} className="flex items-center gap-4 p-2 rounded border border-primary/30 bg-primary/10 dark:border-primary/25 dark:bg-primary/20">
                               <div className="flex-1">
                                 <p className="font-medium">{color.name}</p>
                               </div>
@@ -658,7 +666,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full min-h-[100px] px-3 py-2 border rounded-md"
+            className="flex w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="Masukkan catatan..."
           />
         </CardContent>
@@ -703,7 +711,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                 <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground mb-4">
-                  Ambil foto perangkat dengan kamera atau upload dari file
+                  Ambil foto perangkat dengan kamera atau upload dari file (format JPG/PNG)
                 </p>
                 <div className="flex gap-2 justify-center">
                   <Button type="button" variant="outline" onClick={startCamera}>
@@ -717,7 +725,7 @@ const ChecklistForm = ({ template, onSuccess }) => {
                     </div>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/jpg"
                       onChange={handlePhotoChange}
                       className="hidden"
                       multiple
@@ -761,10 +769,10 @@ const ChecklistForm = ({ template, onSuccess }) => {
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={loading} size="lg">
           {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Menyimpan...
-            </>
+            <div className="flex w-full items-center justify-center gap-2">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-32 rounded-md" />
+            </div>
           ) : (
             'Simpan Maintenance Record'
           )}

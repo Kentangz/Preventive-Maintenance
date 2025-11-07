@@ -66,7 +66,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'identity_photo' => 'required|image|mimes:jpeg,png,jpg,gif',
+            'identity_photo' => 'required|image|mimes:jpeg,png,jpg',
         ]);
 
         if ($validator->fails()) {
@@ -174,7 +174,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'signature' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+            'signature' => 'nullable|image|mimes:jpeg,png,jpg',
         ]);
 
         if ($validator->fails()) {
@@ -228,7 +228,7 @@ class AuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'signature' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+            'signature' => 'nullable|image|mimes:jpeg,png,jpg',
         ]);
 
         if ($validator->fails()) {

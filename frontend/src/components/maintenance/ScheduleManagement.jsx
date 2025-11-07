@@ -5,7 +5,8 @@ import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import AlertDialog from '../ui/AlertDialog'
 import Alert from '../ui/Alert'
-import { Plus, Trash2, Edit, Download, Loader2, Files as FilesIcon, Search, User as UserIcon } from 'lucide-react' 
+import { Skeleton } from '../ui/Skeleton'
+import { Plus, Trash2, Edit, Download, Files as FilesIcon, Search, User as UserIcon } from 'lucide-react' 
 import api from '../../utils/api'
 
 const ScheduleManagement = () => {
@@ -289,7 +290,7 @@ const ScheduleManagement = () => {
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Masukkan deskripsi dokumen"
-                  className="w-full min-h-[100px] px-3 py-2 border rounded-md"
+                  className="flex w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
@@ -306,13 +307,13 @@ const ScheduleManagement = () => {
                   Upload dokumen dalam format apapun (PDF, Word, Excel, dll)
                 </p>
                 {editingSchedule && editingSchedule.document_name && (
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-primary mt-1">
                     Dokumen saat ini: {editingSchedule.document_name}
                     {editingSchedule.document_size && ` (${formatFileSize(editingSchedule.document_size)})`}
                   </p>
                 )}
                 {formData.document && (
-                  <p className="text-xs text-green-600 mt-1">
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">
                     File dipilih: {formData.document.name}
                   </p>
                 )}
@@ -321,10 +322,10 @@ const ScheduleManagement = () => {
               <div className="flex gap-2">
                 <Button type="submit" disabled={loading}>
                   {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Menyimpan...
-                    </>
+                    <div className="flex w-full items-center justify-center gap-2">
+                      <Skeleton className="h-4 w-4 rounded-full" />
+                      <Skeleton className="h-4 w-24 rounded-md" />
+                    </div>
                   ) : (
                     editingSchedule ? 'Update Dokumen' : 'Simpan Dokumen'
                   )}
@@ -374,9 +375,10 @@ const ScheduleManagement = () => {
           {loading && schedules.length === 0 ? (
             <Card>
               <CardContent className="p-6">
-                <div className="text-center text-muted-foreground">
-                  <Loader2 className="h-8 w-8 mx-auto animate-spin mb-4" />
-                  <p>Memuat dokumen...</p>
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-24 w-full" />
                 </div>
               </CardContent>
             </Card>
