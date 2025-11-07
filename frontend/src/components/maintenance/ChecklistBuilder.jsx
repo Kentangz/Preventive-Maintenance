@@ -4,7 +4,8 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Label } from '../ui/Label'
 import Alert from '../ui/Alert'
-import { Trash2, Plus, Save, Eye, Edit, Loader2 } from 'lucide-react'
+import { Trash2, Plus, Save, Eye, Edit, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertDialog } from '../ui/AlertDialog' 
 import api from '../../utils/api'
 
 const ChecklistBuilder = ({ category, template, onSave }) => {
@@ -30,6 +31,13 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [previewMode, setPreviewMode] = useState(false)
+  const [openSectionIndex, setOpenSectionIndex] = useState(0)
+
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    index: null,
+    itemCount: 0
+  })
 
   useEffect(() => {
     if (template) {
@@ -47,6 +55,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
         })) : [],
         is_active: template.is_active
       })
+      setOpenSectionIndex(0)
     }
   }, [template])
 
@@ -76,6 +85,7 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
   }
 
   const addChecklistItem = () => {
+    const newSectionIndex = formData.items.length 
     setFormData(prev => ({
       ...prev,
       items: [
@@ -88,13 +98,41 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
         }
       ]
     }))
+    setOpenSectionIndex(newSectionIndex)
   }
 
-  const removeChecklistItem = (index) => {
+  const performDeleteSection = (index) => {
     setFormData(prev => ({
       ...prev,
       items: prev.items.filter((_, i) => i !== index)
     }))
+    if (openSectionIndex === index) {
+      setOpenSectionIndex(null) 
+    }
+  }
+
+  const handleDeleteSectionClick = (index) => {
+    const section = formData.items[index]
+    if (section.items.length > 0) {
+      setDeleteModalState({
+        isOpen: true,
+        index: index,
+        itemCount: section.items.length
+      })
+    } else {
+      performDeleteSection(index)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    if (deleteModalState.index !== null) {
+      performDeleteSection(deleteModalState.index)
+    }
+    setDeleteModalState({ isOpen: false, index: null, itemCount: 0 })
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteModalState({ isOpen: false, index: null, itemCount: 0 })
   }
 
   const addItemToSection = (sectionIndex) => {
@@ -118,15 +156,11 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       colors: [],
       merge_columns: false
     })
-    
-    console.log('Added Ink/Toner/Ribbon item:', newItems[sectionIndex].items[newItems[sectionIndex].items.length - 1])
-    
     setFormData(prev => ({
       ...prev,
       items: newItems
     }))
   }
-
   const addColorToInkTonerRibbon = (sectionIndex, itemIndex) => {
     const newItems = [...formData.items]
     if (!newItems[sectionIndex].items[itemIndex].colors) {
@@ -140,7 +174,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
-
   const updateColorInInkTonerRibbon = (sectionIndex, itemIndex, colorIndex, field, value) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items[itemIndex].colors[colorIndex][field] = value
@@ -149,7 +182,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
-
   const removeColorFromInkTonerRibbon = (sectionIndex, itemIndex, colorIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items[itemIndex].colors.splice(colorIndex, 1)
@@ -158,15 +190,11 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
-
-  // Check if any section already has Ink/Toner/Ribbon type
   const hasInkTonerRibbonInAnySection = () => {
     return formData.items.some(section => 
       section.items.some(item => item.isInkTonerRibbon)
     )
   }
-
-  // Special functions for Stok Tinta (only for Printer category)
   const addStokTintaItem = () => {
     setFormData(prev => ({
       ...prev,
@@ -179,7 +207,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       }
     }))
   }
-
   const removeStokTintaItem = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -189,7 +216,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       }
     }))
   }
-
   const updateStokTintaItem = (index, value) => {
     const items = [...(formData.special_fields?.stok_tinta || [])]
     items[index].description = value
@@ -201,7 +227,6 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       }
     }))
   }
-
   const removeItemFromSection = (sectionIndex, itemIndex) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items = newItems[sectionIndex].items.filter((_, i) => i !== itemIndex)
@@ -210,11 +235,9 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
       items: newItems
     }))
   }
-
   const updateItemInSection = (sectionIndex, itemIndex, field, value) => {
     const newItems = [...formData.items]
     newItems[sectionIndex].items[itemIndex][field] = value
-    
     setFormData(prev => ({
       ...prev,
       items: newItems
@@ -225,45 +248,38 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     for (const [key, value] of Object.entries(formData.device_fields)) {
       if (value.trim() === '') {
         const fieldName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        setError(`Device field "${fieldName}" harus diisi.`);
-        return false;
+        return { valid: false, message: `Device field "${fieldName}" harus diisi.` };
       }
     }
 
     if (formData.items.length === 0) {
-      setError('Minimal harus ada satu "Checklist Item" section.');
-      return false;
+      return { valid: false, message: 'Minimal harus ada satu "Checklist Item" section.' };
     }
 
     for (let i = 0; i < formData.items.length; i++) {
       const section = formData.items[i];
       if (section.title.trim() === '') {
-        setError(`Judul untuk "Checklist Item" section #${i + 1} harus diisi.`);
-        return false;
+        return { valid: false, message: `Judul untuk "Checklist Item" section #${i + 1} harus diisi.`, sectionIndex: i };
       }
 
       if (section.items.length === 0) {
-        setError(`Minimal harus ada satu item di dalam section "${section.title || `Section #${i+1}`}".`);
-        return false;
+        return { valid: false, message: `Minimal harus ada satu item di dalam section "${section.title || `Section #${i+1}`}".`, sectionIndex: i };
       }
 
       for (let j = 0; j < section.items.length; j++) {
         const subItem = section.items[j];
         if (subItem.isInkTonerRibbon) {
           if (subItem.colors.length === 0) {
-            setError(`Minimal harus ada satu warna untuk "Ink/Toner/Ribbon Type" di section "${section.title || `Section #${i+1}`}".`);
-            return false;
+            return { valid: false, message: `Minimal harus ada satu warna untuk "Ink/Toner/Ribbon Type" di section "${section.title || `Section #${i+1}`}".`, sectionIndex: i };
           }
           for (let k = 0; k < subItem.colors.length; k++) {
             if (subItem.colors[k].name.trim() === '') {
-              setError(`Nama warna #${k + 1} di "Ink/Toner/Ribbon Type" (section "${section.title || `Section #${i+1}`}") harus diisi.`);
-              return false;
+              return { valid: false, message: `Nama warna #${k + 1} di "Ink/Toner/Ribbon Type" (section "${section.title || `Section #${i+1}`}") harus diisi.`, sectionIndex: i };
             }
           }
         } else {
           if (subItem.description.trim() === '') {
-            setError(`Deskripsi untuk item #${j + 1} di section "${section.title || `Section #${i+1}`}" harus diisi.`);
-            return false;
+            return { valid: false, message: `Deskripsi untuk item #${j + 1} di section "${section.title || `Section #${i+1}`}" harus diisi.`, sectionIndex: i };
           }
         }
       }
@@ -272,13 +288,12 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     if (formData.category === 'printer' && formData.special_fields.stok_tinta) {
       for (let i = 0; i < formData.special_fields.stok_tinta.length; i++) {
         if (formData.special_fields.stok_tinta[i].description.trim() === '') {
-          setError(`Deskripsi untuk "Stok Tinta" item #${i + 1} harus diisi.`);
-          return false;
+          return { valid: false, message: `Deskripsi untuk "Stok Tinta" item #${i + 1} harus diisi.` };
         }
       }
     }
     
-    return true;
+    return { valid: true };
   }
 
   const handleSubmit = async (e) => {
@@ -286,7 +301,24 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
     setMessage('')
     setError('')
 
-    if (!validateForm()) {
+    const validationResult = validateForm();
+    if (!validationResult.valid) {
+      setError(validationResult.message);
+      
+      if (validationResult.sectionIndex !== undefined) {
+        setOpenSectionIndex(validationResult.sectionIndex);
+        setTimeout(() => {
+          const errorSectionId = `section-card-${validationResult.sectionIndex}`;
+          const element = document.getElementById(errorSectionId);
+          if (element) {
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+            element.querySelector('input')?.focus();
+          }
+        }, 100); 
+      }
       return; 
     }
 
@@ -498,11 +530,12 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
               </div>
 
               {formData.items.map((item, sectionIndex) => (
-                <Card key={sectionIndex}>
+                <Card key={sectionIndex} id={`section-card-${sectionIndex}`}>
                   <CardContent className="p-4">
                     <div className="space-y-4">
-                      {/* Section Title */}
-                      <div className="flex items-center justify-between">
+                      
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Input Judul (Mengisi sisa ruang) */}
                         <Input
                           placeholder="Section title"
                           value={item.title}
@@ -511,56 +544,124 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                             newItems[sectionIndex].title = e.target.value
                             setFormData(prev => ({ ...prev, items: newItems }))
                           }}
-                          className="flex-1 mr-2"
+                          className="flex-1"
                           required
                         />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeChecklistItem(sectionIndex)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
 
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => addItemToSection(sectionIndex)}
+                            onClick={() => setOpenSectionIndex(openSectionIndex === sectionIndex ? null : sectionIndex)}
+                            className="flex items-center gap-2 text-muted-foreground"
                           >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Item
+                            <span className="text-sm font-medium text-nowrap">
+                              {item.items.length} {item.items.length === 1 ? 'item' : 'items'}
+                            </span>
+                            {openSectionIndex === sectionIndex ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </Button>
-                          {formData.category === 'printer' && !hasInkTonerRibbonInAnySection() && (
+                          
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteSectionClick(sectionIndex)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {openSectionIndex === sectionIndex && (
+                        <div className="space-y-2 pt-4 border-t mt-4">
+                          <div className="flex gap-2">
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => addInkTonerRibbonItem(sectionIndex)}
-                              className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                              onClick={() => addItemToSection(sectionIndex)}
                             >
                               <Plus className="h-4 w-4 mr-2" />
-                              Add Ink/Toner/Ribbon Type
+                              Add Item
                             </Button>
-                          )}
-                        </div>
+                            {formData.category === 'printer' && !hasInkTonerRibbonInAnySection() && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addInkTonerRibbonItem(sectionIndex)}
+                                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Ink/Toner/Ribbon Type
+                              </Button>
+                            )}
+                          </div>
 
-                        {item.items.map((subItem, itemIndex) => (
-                          <div key={itemIndex} className="p-3 border rounded">
-                            {subItem.isInkTonerRibbon ? (
-                              // Special UI for Ink/Toner/Ribbon type
-                              <div className="space-y-3">
-                                {/* ... (UI Ink/Toner tidak berubah) ... */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                                      Ink/Toner/Ribbon Type
-                                    </span>
+                          {item.items.map((subItem, itemIndex) => (
+                            <div key={itemIndex} className="p-3 border rounded">
+                              {subItem.isInkTonerRibbon ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                                        Ink/Toner/Ribbon Type
+                                      </span>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   </div>
+                                  <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => addColorToInkTonerRibbon(sectionIndex, itemIndex)}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Color
+                                      </Button>
+                                    </div>
+                                    {(subItem.colors || []).map((color, colorIndex) => (
+                                      <div key={colorIndex} className="flex gap-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                        <Input
+                                          placeholder="Color name (e.g., Black, Cyan)"
+                                          value={color.name || ''}
+                                          onChange={(e) => updateColorInInkTonerRibbon(sectionIndex, itemIndex, colorIndex, 'name', e.target.value)}
+                                          className="flex-1"
+                                          required
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="destructive"
+                                          size="sm"
+                                          onClick={() => removeColorFromInkTonerRibbon(sectionIndex, itemIndex, colorIndex)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Description"
+                                    value={subItem.description || ''}
+                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
+                                    className="flex-1"
+                                    required
+                                  />
                                   <Button
                                     type="button"
                                     variant="destructive"
@@ -569,77 +670,26 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => addColorToInkTonerRibbon(sectionIndex, itemIndex)}
-                                    >
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Color
-                                    </Button>
                                   </div>
-                                  {(subItem.colors || []).map((color, colorIndex) => (
-                                    <div key={colorIndex} className="flex gap-2 p-2 bg-blue-50 rounded border border-blue-200">
-                                      <Input
-                                        placeholder="Color name (e.g., Black, Cyan)"
-                                        value={color.name || ''}
-                                        onChange={(e) => updateColorInInkTonerRibbon(sectionIndex, itemIndex, colorIndex, 'name', e.target.value)}
-                                        className="flex-1"
-                                        required
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => removeColorFromInkTonerRibbon(sectionIndex, itemIndex, colorIndex)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
+                                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                                    <input
+                                      type="checkbox"
+                                      id={`merge_columns_${sectionIndex}_${itemIndex}`}
+                                      checked={subItem.merge_columns || false}
+                                      onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-xs italic text-gray-500">
+                                      Gabungkan kolom (Normal, Error, Information) untuk item ini
+                                    </label>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              // Regular item UI
-                              <div className="space-y-2">
-                              <div className="flex gap-2">
-                                <Input
-                                  placeholder="Description"
-                                  value={subItem.description || ''}
-                                  onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'description', e.target.value)}
-                                  className="flex-1"
-                                  required
-                                />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => removeItemFromSection(sectionIndex, itemIndex)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                                </div>
-                                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                                  <input
-                                    type="checkbox"
-                                    id={`merge_columns_${sectionIndex}_${itemIndex}`}
-                                    checked={subItem.merge_columns || false}
-                                    onChange={(e) => updateItemInSection(sectionIndex, itemIndex, 'merge_columns', e.target.checked)}
-                                    className="h-4 w-4"
-                                  />
-                                  <label htmlFor={`merge_columns_${sectionIndex}_${itemIndex}`} className="text-sm">
-                                    Merge columns (Normal, Error, Information) in PDF for this item
-                                  </label>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                     </div>
                   </CardContent>
                 </Card>
@@ -694,6 +744,23 @@ const ChecklistBuilder = ({ category, template, onSave }) => {
             </div>
           </form>
           )}
+
+          <AlertDialog 
+            open={deleteModalState.isOpen} 
+            onOpenChange={(isOpen) => !isOpen && handleCancelDelete()}
+            title="Hapus Section?"
+            description={
+              <>
+                Section ini berisi <strong>{deleteModalState.itemCount} item</strong>. Menghapus section juga akan menghapus semua item di dalamnya.
+                <br />
+                Tindakan ini tidak dapat dibatalkan.
+              </>
+            }
+            confirmText="Ya, Hapus"
+            cancelText="Batal"
+            onConfirm={handleConfirmDelete}
+            variant="destructive"
+          />
         </CardContent>
       </Card>
     </div>
