@@ -10,6 +10,7 @@ import { Search, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } fro
 import { useAuth } from '../../hooks/useAuth'
 import { useMaintenanceApprovals } from '../../hooks/useMaintenanceApprovals'
 import { maintenanceService } from '../../services/maintenanceService'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const AcceptManagement = ({ category, onPendingCountChange }) => {
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'rejected'
@@ -396,21 +397,12 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                       </>
                     )}
                     {activeTab === 'rejected' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
+                      <DeleteButton
                         onClick={() => handleDeleteRecord(record.id)}
+                        loading={deleteLoading === record.id}
                         disabled={deleteLoading === record.id}
                         title="Permanently delete this maintenance record"
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {deleteLoading === record.id ? (
-                          <ButtonLoader labelClassName="w-20" className="w-auto" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 mr-2" />
-                        )}
-                        Delete
-                      </Button>
+                      />
                     )}
                   </div>
                 </div>

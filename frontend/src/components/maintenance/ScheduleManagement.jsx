@@ -10,6 +10,7 @@ import ButtonLoader from '../ui/ButtonLoader'
 import { Plus, Trash2, Edit, Download, Files as FilesIcon, Search, User as UserIcon } from 'lucide-react' 
 import { scheduleService } from '../../services/scheduleService'
 import { useSchedules } from '../../hooks/useSchedules'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const ScheduleManagement = () => {
   const {
@@ -288,19 +289,20 @@ const ScheduleManagement = () => {
                   type="file"
                   onChange={handleFileChange}
                   accept="*/*"
+                  required
                   className="cursor-pointer"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Upload dokumen dalam format apapun (PDF, Word, Excel, dll)
                 </p>
                 {editingSchedule && editingSchedule.document_name && (
-                  <p className="text-xs text-primary mt-1">
+                  <p className="text-sm text-primary mt-1">
                     Dokumen saat ini: {editingSchedule.document_name}
                     {editingSchedule.document_size && ` (${formatFileSize(editingSchedule.document_size)})`}
                   </p>
                 )}
                 {formData.document && (
-                  <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">
+                  <p className="text-sm text-emerald-500 dark:text-emerald-400 mt-1">
                     File dipilih: {formData.document.name}
                   </p>
                 )}
@@ -435,13 +437,9 @@ const ScheduleManagement = () => {
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
+                      <DeleteButton
                         onClick={() => handleDelete(schedule.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      />
                     </div>
                   </div>
                 </CardContent>

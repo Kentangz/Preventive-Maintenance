@@ -8,6 +8,7 @@ import { Skeleton } from '../ui/Skeleton'
 import ButtonLoader from '../ui/ButtonLoader'
 import { Search, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
 import { maintenanceService } from '../../services/maintenanceService'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const MaintenanceRecordsList = ({ category }) => {
   const [records, setRecords] = useState([])
@@ -261,21 +262,12 @@ const MaintenanceRecordsList = ({ category }) => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
+                    <DeleteButton
                       onClick={() => handleDeleteRecord(record.id)}
+                      loading={deleteRecordLoading === record.id}
                       disabled={deleteRecordLoading === record.id}
                       title="Permanently delete this maintenance record including PDF and all related data"
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      {deleteRecordLoading === record.id ? (
-                        <ButtonLoader labelClassName="w-20" className="w-auto" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 mr-2" />
-                      )}
-                      Delete Record
-                    </Button>
+                    />
                   </div>
                 </div>
               </CardContent>

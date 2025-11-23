@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { APP_CONFIG } from './config/app'
 import { Card, CardContent } from './components/ui/Card'
 import { Skeleton } from './components/ui/Skeleton'
 import Alert from './components/ui/Alert'
@@ -116,7 +117,10 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="preventive-maintenance-theme">
+    <ThemeProvider 
+      defaultTheme={APP_CONFIG.theme.defaultTheme} 
+      storageKey={APP_CONFIG.theme.storageKey}
+    >
       <AuthProvider>
         <AppContent />
       </AuthProvider>

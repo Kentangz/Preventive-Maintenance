@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import api, { setSessionExpiredHandler } from '../utils/api'
 import { useAuthActions } from '../hooks/useAuthActions'
 import { authService } from '../services/authService'
-import { AuthContext } from './AuthContextBase'
+import { AuthContext } from './AuthContextType'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
