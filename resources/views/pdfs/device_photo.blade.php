@@ -88,7 +88,7 @@
 
     .photo-item {
       flex: 1;
-      max-width: 48%;
+      max-width: 100%;
       min-width: 200px;
       display: flex;
       justify-content: center;
@@ -105,7 +105,7 @@
     }
 
     .photo-item.single {
-      max-width: 60%;
+      max-width: 100%;
     }
 
     .signature-table {
