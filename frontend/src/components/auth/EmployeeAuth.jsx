@@ -9,6 +9,7 @@ import { ThemeToggle } from '../ui/ThemeToggle'
 import Alert from '../ui/Alert'
 import ButtonLoader from '../ui/ButtonLoader'
 import { User, Camera, X, RefreshCw } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
 
 const EmployeeAuth = () => {
   const [formData, setFormData] = useState({

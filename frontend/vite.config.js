@@ -24,6 +24,19 @@ export default defineConfig({
     plugins: [
         react(),
         {
+            name: "clean-assets",
+            buildStart: async () => {
+                const fs = await import("fs");
+                const path = await import("path");
+                const assetsPath = path.resolve(__dirname, "../public/assets");
+
+                if (fs.existsSync(assetsPath)) {
+                    fs.rmSync(assetsPath, { recursive: true, force: true });
+                    console.log("Cleaned public/assets directory");
+                }
+            },
+        },
+        {
             name: "move-index-html",
             closeBundle: async () => {
                 const fs = await import("fs");

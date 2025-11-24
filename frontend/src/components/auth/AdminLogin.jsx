@@ -9,6 +9,7 @@ import { ThemeToggle } from '../ui/ThemeToggle'
 import Alert from '../ui/Alert'
 import ButtonLoader from '../ui/ButtonLoader'
 import { Shield, Mail, Lock } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({

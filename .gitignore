@@ -24,3 +24,4 @@ Homestead.yaml
 Thumbs.db
 frontend/.cursor
 database/seeders/AdminSeeder.php
+frontend/package-lock.json
