@@ -57,6 +57,11 @@ export const authService = {
 
         return response.data;
     },
+
+    deleteEmployeeIdentityPhoto: async () => {
+        const response = await api.delete("/employee/identity-photo");
+        return response.data;
+    },
 };
 
 export default authService;

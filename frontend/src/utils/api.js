@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_CONFIG } from "../config/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = API_CONFIG.baseURL;
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -8,21 +9,14 @@ const api = axios.create({
         "Content-Type": "application/json",
         Accept: "application/json",
     },
-    withCredentials: false,
+    withCredentials: true,
 });
 
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("auth_token");
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+let sessionExpiredHandler = null;
+
+export const setSessionExpiredHandler = (handler) => {
+    sessionExpiredHandler = handler;
+};
 
 api.interceptors.response.use(
     (response) => {
@@ -30,7 +24,23 @@ api.interceptors.response.use(
     },
     (error) => {
         if (error.response?.status === 401) {
-            //
+            const url = error.config?.url || "";
+            const publicEndpoints = [
+                "/admin/login",
+                "/employee/auth",
+                "/admin/me",
+                "/employee/me",
+            ];
+
+            const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+                url.includes(endpoint)
+            );
+
+            if (!isPublicEndpoint) {
+                if (sessionExpiredHandler) {
+                    sessionExpiredHandler();
+                }
+            }
         }
         return Promise.reject(error);
     }

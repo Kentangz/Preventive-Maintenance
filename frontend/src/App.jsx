@@ -2,8 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { APP_CONFIG } from './config/app'
 import { Card, CardContent } from './components/ui/Card'
 import { Skeleton } from './components/ui/Skeleton'
+import Alert from './components/ui/Alert'
 import Home from './pages/Home'
 import AdminLogin from './components/auth/AdminLogin'
 import EmployeeAuth from './components/auth/EmployeeAuth'
@@ -62,43 +64,65 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   return children
 }
 
+const AppContent = () => {
+  const { sessionExpiredMessage, setSessionExpiredMessage } = useAuth()
+
+  return (
+    <>
+      {sessionExpiredMessage && (
+        <Alert
+          variant="warning"
+          title="Sesi Berakhir"
+          message={sessionExpiredMessage}
+          onClose={() => setSessionExpiredMessage('')}
+          duration={5000}
+        />
+      )}
+      <Router>
+        <div className="min-h-screen bg-background text-foreground">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/employee/auth" element={<EmployeeAuth />} />
+            
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Protected Employee Routes */}
+            <Route
+              path="/employee/dashboard"
+              element={
+                <ProtectedRoute requiredRole="employee">
+                  <EmployeeDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </Router>
+    </>
+  )
+}
+
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="preventive-maintenance-theme">
+    <ThemeProvider 
+      defaultTheme={APP_CONFIG.theme.defaultTheme} 
+      storageKey={APP_CONFIG.theme.storageKey}
+    >
       <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-background text-foreground">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/employee/auth" element={<EmployeeAuth />} />
-              
-              {/* Protected Admin Routes */}
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* Protected Employee Routes */}
-              <Route
-                path="/employee/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="employee">
-                    <EmployeeDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        </Router>
+        <AppContent />
       </AuthProvider>
     </ThemeProvider>
   )

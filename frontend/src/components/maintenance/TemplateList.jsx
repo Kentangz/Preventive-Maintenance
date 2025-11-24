@@ -8,6 +8,7 @@ import { Skeleton } from '../ui/Skeleton'
 import ButtonLoader from '../ui/ButtonLoader'
 import { Edit, Trash2, Search, FileText, Copy, ArrowUpDown, ArrowUp, ArrowDown, PcCase, Hash, QrCode, MapPin } from 'lucide-react'
 import { useAdminTemplates } from '../../hooks/useAdminTemplates'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternalSuccess }) => {
   const {
@@ -49,8 +50,8 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
     setError('')
     setConfirmDialog({
       open: true,
-      title: 'Delete Template',
-      description: 'Are you sure you want to delete this template? Records created with this template will still be saved.',
+      title: 'Hapus Template',
+      description: 'Apakah Anda yakin ingin menghapus template ini? Catatan yang sudah dibuat dengan template ini akan tetap tersimpan.',
       onConfirm: async () => {
         try {
           setDeletingId(id)
@@ -407,22 +408,11 @@ const TemplateList = ({ onEdit, onRefresh, externalSuccess = '', onClearExternal
                             </>
                           )}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <DeleteButton
                           onClick={() => handleDelete(template.id)}
+                          loading={deletingId === template.id}
                           disabled={deletingId === template.id}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          {deletingId === template.id ? (
-                            <ButtonLoader labelClassName="w-16" className="w-auto" />
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Delete</span>
-                            </>
-                          )}
-                        </Button>
+                        />
                       </div>
                     </div>
                   </CardContent>

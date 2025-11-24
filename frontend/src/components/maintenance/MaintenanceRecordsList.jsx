@@ -8,6 +8,7 @@ import { Skeleton } from '../ui/Skeleton'
 import ButtonLoader from '../ui/ButtonLoader'
 import { Search, Download, FileText, User, Calendar, Eye, Trash2 } from 'lucide-react'
 import { maintenanceService } from '../../services/maintenanceService'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const MaintenanceRecordsList = ({ category }) => {
   const [records, setRecords] = useState([])
@@ -64,12 +65,12 @@ const MaintenanceRecordsList = ({ category }) => {
 
   const handleDeleteRecord = async (recordId) => {
     const record = records.find(r => r.id === recordId)
-    const deviceName = record?.device_data?.device || 'this record'
+    const deviceName = record?.device_data?.device || 'catatan ini'
     
     setConfirmDialog({
       open: true,
-      title: 'Delete Maintenance Record',
-      description: `Are you sure you want to permanently delete the maintenance record for "${deviceName}"? This action cannot be undone. All data including PDF, photos, and records will be permanently deleted.`,  
+      title: 'Hapus Catatan Maintenance',
+      description: `Apakah Anda yakin ingin menghapus permanen catatan maintenance untuk "${deviceName}"? Tindakan ini tidak dapat dibatalkan. Seluruh data termasuk PDF, foto, dan catatan akan terhapus permanen.`,  
       onConfirm: async () => {
         setDeleteRecordLoading(recordId)
         setError('')
@@ -261,21 +262,12 @@ const MaintenanceRecordsList = ({ category }) => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
+                    <DeleteButton
                       onClick={() => handleDeleteRecord(record.id)}
+                      loading={deleteRecordLoading === record.id}
                       disabled={deleteRecordLoading === record.id}
                       title="Permanently delete this maintenance record including PDF and all related data"
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      {deleteRecordLoading === record.id ? (
-                        <ButtonLoader labelClassName="w-20" className="w-auto" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 mr-2" />
-                      )}
-                      Delete Record
-                    </Button>
+                    />
                   </div>
                 </div>
               </CardContent>

@@ -243,10 +243,16 @@
     <div class="photo-section">
       <div class="photo-label">Foto Identitas</div>
       @php
-      $identityPhoto = $record->employee->identity_photo;
+      // Use snapshot from MaintenancePhoto if available, otherwise fallback to employee identity_photo
+      $picProofPhoto = $record->photos->firstWhere('photo_type', 'pic_proof');
       $photoPath = '';
-      if ($identityPhoto) {
-      $photoPath = storage_path('app/public/' . $identityPhoto);
+
+      if ($picProofPhoto && $picProofPhoto->photo_path) {
+      // Use snapshot from MaintenancePhoto
+      $photoPath = storage_path('app/public/' . $picProofPhoto->photo_path);
+      } elseif ($record->employee && $record->employee->identity_photo) {
+      // Fallback to employee identity_photo if snapshot doesn't exist
+      $photoPath = storage_path('app/public/' . $record->employee->identity_photo);
       }
       @endphp
 

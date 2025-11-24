@@ -10,6 +10,7 @@ import { Search, Download, Eye, Check, X, FileText, User, Calendar, Trash2 } fro
 import { useAuth } from '../../hooks/useAuth'
 import { useMaintenanceApprovals } from '../../hooks/useMaintenanceApprovals'
 import { maintenanceService } from '../../services/maintenanceService'
+import { DeleteButton } from '../ui/DeleteButton'
 
 const AcceptManagement = ({ category, onPendingCountChange }) => {
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'rejected'
@@ -91,7 +92,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     setConfirmDialog({
       open: true,
       title: 'Terima Submission',
-      description: 'Are you sure you want to accept this submission?',
+      description: 'Apakah Anda yakin ingin menerima pengajuan ini?',
       onConfirm: async () => {
         setActionLoading(recordId)
         setError('')
@@ -120,7 +121,7 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     setConfirmDialog({
       open: true,
       title: 'Tolak Submission',
-      description: 'Are you sure you want to reject this submission?',
+      description: 'Apakah Anda yakin ingin menolak pengajuan ini?',
       onConfirm: async () => {
         setActionLoading(recordId)
         setError('')
@@ -149,13 +150,13 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
     const record = activeTab === 'pending' 
       ? pendingRecords.find(r => r.id === recordId)
       : rejectedRecords.find(r => r.id === recordId)
-    const deviceName = record?.device_data?.device || 'this record'
-    const statusText = activeTab === 'pending' ? 'pending' : 'rejected'
+    const deviceName = record?.device_data?.device || 'catatan ini'
+    const statusText = activeTab === 'pending' ? 'tertunda' : 'ditolak'
     
     setConfirmDialog({
       open: true,
-      title: 'Delete Maintenance Record',
-      description: `Are you sure you want to permanently delete the ${statusText} maintenance record for "${deviceName}"? This action cannot be undone. All data including photos and records will be permanently deleted.`,  
+      title: 'Hapus Catatan Maintenance',
+      description: `Apakah Anda yakin ingin menghapus permanen catatan maintenance berstatus ${statusText} untuk "${deviceName}"? Tindakan ini tidak dapat dibatalkan. Seluruh data termasuk foto dan catatan akan terhapus permanen.`,  
       onConfirm: async () => {
         setDeleteLoading(recordId)
         setError('')
@@ -396,21 +397,12 @@ const AcceptManagement = ({ category, onPendingCountChange }) => {
                       </>
                     )}
                     {activeTab === 'rejected' && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
+                      <DeleteButton
                         onClick={() => handleDeleteRecord(record.id)}
+                        loading={deleteLoading === record.id}
                         disabled={deleteLoading === record.id}
                         title="Permanently delete this maintenance record"
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {deleteLoading === record.id ? (
-                          <ButtonLoader labelClassName="w-20" className="w-auto" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 mr-2" />
-                        )}
-                        Delete
-                      </Button>
+                      />
                     )}
                   </div>
                 </div>
